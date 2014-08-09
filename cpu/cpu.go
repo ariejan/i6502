@@ -97,6 +97,10 @@ func (c *Cpu) memoryAddress(in Instruction) uint16 {
 	case absoluteY:
 		return in.Op16 + uint16(c.Y)
 
+	case indirect:
+		location := uint16(in.Op16)
+		return c.Bus.Read16(location)
+
 	// Indexed Indirect (X)
 	// Operand is the zero-page location of a little-endian 16-bit base address.
 	// The X register is added (wrapping; discarding overflow) before loading.
@@ -123,7 +127,7 @@ func (c *Cpu) memoryAddress(in Instruction) uint16 {
 	case zeropageY:
 		return uint16(in.Op8 + c.Y)
 	default:
-		panic("unhandled addressing")
+		panic(fmt.Errorf("Unhandled addressing mode: 0x%02X (%s). Are you sure your rom is compatible?", in.addressing, addressingNames[in.addressing]))
 	}
 }
 
