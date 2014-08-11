@@ -42,6 +42,8 @@ type Cpu struct {
 	// Memory bus
 	Bus *bus.Bus
 
+	InterruptChan chan bool
+
 	// Handle exiting
 	ExitChan chan int
 }
@@ -63,16 +65,49 @@ func (c *Cpu) String() string {
 	)
 }
 
+func (c *Cpu) handleInterrupt(returnPC uint16) {
+	c.setStatus(sBreak, true)
+
+	// Push PC + 1 onto stack
+	c.stackPush(byte(returnPC >> 8))
+	c.stackPush(byte(returnPC))
+	// Push status register to the stack
+	c.stackPush(c.SR)
+
+	// Disable interrupts
+	c.setStatus(sInterrupt, true)
+
+	c.PC = c.Bus.Read16(0xFFFE)
+}
+
+func (c *Cpu) stackPush(data byte) {
+	c.Bus.Write(StackBase+uint16(c.SP), data)
+	c.SP--
+}
+
+func (c *Cpu) stackPop() byte {
+	c.SP++
+	return c.Bus.Read(StackBase + uint16(c.SP))
+}
+
 func (c *Cpu) Step() {
-	// Read the instruction (including operands)
-	instruction := ReadInstruction(c.PC, c.Bus)
+	select {
+	case <-c.InterruptChan:
+		if !c.getStatus(sInterrupt) {
+			// Handle interrupt
+			c.handleInterrupt(c.PC)
+		}
+	default:
+		// Read the instruction (including operands)
+		instruction := ReadInstruction(c.PC, c.Bus)
 
-	// Move the Program Counter forward, depending
-	// on the size of the optype we just read.
-	c.PC += uint16(instruction.Bytes)
+		// Move the Program Counter forward, depending
+		// on the size of the optype we just read.
+		c.PC += uint16(instruction.Bytes)
 
-	// Execute the instruction
-	c.execute(instruction)
+		// Execute the instruction
+		c.execute(instruction)
+	}
 }
 
 func (c *Cpu) stackHead(offset int8) uint16 {
@@ -240,8 +275,12 @@ func (c *Cpu) execute(in Instruction) {
 		c.ORA(in)
 	case pha:
 		c.PHA(in)
+	case php:
+		c.PHP(in)
 	case pla:
 		c.PLA(in)
+	case plp:
+		c.PLP(in)
 	case rol:
 		c.ROL(in)
 	case ror:
@@ -275,7 +314,7 @@ func (c *Cpu) execute(in Instruction) {
 	case _end:
 		c._END(in)
 	default:
-		panic(fmt.Sprintf("Unhandled instruction: %v", in))
+		panic(fmt.Sprintf("Unhandled instruction: %X", in.OpType))
 	}
 }
 
@@ -354,8 +393,10 @@ func (c *Cpu) BPL(in Instruction) {
 
 // BRK: software interrupt
 func (c *Cpu) BRK(in Instruction) {
-	// temporarily used to dump status
-	fmt.Println("BRK:", c)
+	// Force interrupt
+	if !c.getStatus(sInterrupt) {
+		c.handleInterrupt(c.PC + 1)
+	}
 }
 
 // CLC: Clear carry flag.
@@ -500,14 +541,22 @@ func (c *Cpu) ORA(in Instruction) {
 
 // PHA: Push accumulator onto stack.
 func (c *Cpu) PHA(in Instruction) {
-	c.Bus.Write(0x0100+uint16(c.SP), c.A)
-	c.SP--
+	c.stackPush(c.A)
+}
+
+// PHP: Push SR to stack
+func (c *Cpu) PHP(in Instruction) {
+	c.stackPush(c.SR)
 }
 
 // PLA: Pull accumulator from stack.
 func (c *Cpu) PLA(in Instruction) {
-	c.SP++
-	c.A = c.Bus.Read(0x0100 + uint16(c.SP))
+	c.A = c.stackPop()
+}
+
+// PLP: Pull SR from stack
+func (c *Cpu) PLP(in Instruction) {
+	c.SR = c.stackPop()
 }
 
 // ROL: Rotate memory or accumulator left one bit.

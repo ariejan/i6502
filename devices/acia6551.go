@@ -35,18 +35,17 @@ type Acia6551 struct {
 
 	InterruptChan chan bool
 
-	RxChan chan byte
 	TxChan chan byte
 }
 
-func NewAcia6551(cpu *Cpu) *Acia6551 {
-	acia := &Acia6551{}
+func NewAcia6551(interruptChan chan bool) *Acia6551 {
+	acia := &Acia6551{InterruptChan: interruptChan}
 	acia.Reset()
+
 	return acia
 }
 
 func (a *Acia6551) Reset() {
-	a.RxChan = make(chan byte, 4096)
 	a.TxChan = make(chan byte, 4096)
 
 	a.tx = 0
@@ -61,8 +60,6 @@ func (a *Acia6551) Reset() {
 
 	a.rxInterruptEnabled = false
 	a.txInterruptEnabled = false
-
-	a.InterruptChan = make(chan bool, 0)
 }
 
 func (a *Acia6551) Size() int {
@@ -101,7 +98,7 @@ func (a *Acia6551) RxWrite(data byte) {
 	a.rxFull = true
 
 	if a.rxInterruptEnabled {
-		// getbus.assertIrq()
+		a.InterruptChan <- true
 	}
 }
 
@@ -150,6 +147,11 @@ func (a *Acia6551) txWrite(value byte) {
 
 func (a *Acia6551) TxRead() byte {
 	a.txEmpty = true
+
+	if a.txInterruptEnabled {
+		a.InterruptChan <- true
+	}
+
 	return a.tx
 }
 
@@ -169,8 +171,13 @@ func (a *Acia6551) debugTxOutput() {
 
 func (a *Acia6551) setCommandRegister(data byte) {
 	fmt.Printf("Setting Acia6551 Command Register: %02X\n", data)
+
 	a.commandRegister = data
-	// TODO: Maybe implement IRQs.
+
+	a.rxInterruptEnabled = ((data >> 1) & 1) == 0
+	a.txInterruptEnabled = ((data>>2)&1) == 1 && ((data>>3)&1) == 0
+
+	fmt.Printf("RxIRQ: %t; TxIRQ: %t\n", a.rxInterruptEnabled, a.txInterruptEnabled)
 }
 
 func (a *Acia6551) setControlRegister(data byte) {

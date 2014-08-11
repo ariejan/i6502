@@ -5,7 +5,6 @@ import (
 	"github.com/ariejan/i6502/cpu"
 	"github.com/ariejan/i6502/devices"
 	"github.com/ariejan/i6502/memory"
-	"log"
 )
 
 type Machine struct {
@@ -22,6 +21,9 @@ type Machine struct {
 
 // Creates a new i6502 Machine instance
 func CreateMachine() *Machine {
+	// Channel for handling interrupts
+	interruptChan := make(chan bool, 0)
+
 	ram := memory.CreateRam()
 
 	rom, err := memory.LoadRomFromFile("rom/ehbasic.rom")
@@ -29,14 +31,14 @@ func CreateMachine() *Machine {
 		panic(err)
 	}
 
-	acia6551 := devices.NewAcia6551()
+	acia6551 := devices.NewAcia6551(interruptChan)
 
 	bus, _ := bus.CreateBus()
 	bus.Attach(ram, "32kB RAM", 0x0000)
 	bus.Attach(rom, "16kB ROM", 0xC000)
 	bus.Attach(acia6551, "ACIA 6551 Serial", 0x8800)
 
-	cpu := &cpu.Cpu{Bus: bus, ExitChan: make(chan int, 0)}
+	cpu := &cpu.Cpu{Bus: bus, InterruptChan: interruptChan, ExitChan: make(chan int, 0)}
 
 	machine := &Machine{SerialTx: make(chan byte, 256), SerialRx: make(chan byte, 256), cpu: cpu, bus: bus}
 
@@ -62,8 +64,7 @@ func CreateMachine() *Machine {
 		for {
 			select {
 			case data := <-machine.SerialRx:
-				log.Printf("Rx: %c", data)
-				acia6551.RxChan <- data
+				acia6551.RxWrite(data)
 			}
 		}
 	}()
