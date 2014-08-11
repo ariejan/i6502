@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/ariejan/i6502/bus"
 	"github.com/ariejan/i6502/cpu"
+	"github.com/ariejan/i6502/devices"
 	"github.com/ariejan/i6502/memory"
 	"os"
 	"os/signal"
@@ -22,15 +23,18 @@ func mainReturningStatus() int {
 	ram := memory.CreateRam()
 
 	// 16kB ROM, filled from file
-	rom, err := memory.LoadRomFromFile("rom/test.rom")
+	rom, err := memory.LoadRomFromFile("rom/ehbasic.rom")
 	if err != nil {
 		panic(err)
 	}
+
+	acia6551 := devices.NewAcia6551()
 
 	// 16-bit address bus
 	bus, _ := bus.CreateBus()
 	bus.Attach(ram, "32kB RAM", 0x0000)
 	bus.Attach(rom, "16kB ROM", 0xC000)
+	bus.Attach(acia6551, "ACIA 6551", 0x8800)
 
 	fmt.Println(bus)
 
@@ -38,6 +42,8 @@ func mainReturningStatus() int {
 
 	cpu := &cpu.Cpu{Bus: bus, ExitChan: exitChan}
 	cpu.Reset()
+
+	go serialServer(cpu, acia6551)
 
 	go func() {
 		for {
