@@ -30,12 +30,16 @@ type Acia6551 struct {
 	rxFull        bool
 	txEmpty       bool
 
+	rxInterruptEnabled bool
+	txInterruptEnabled bool
+
+	InterruptChan chan bool
+
 	RxChan chan byte
 	TxChan chan byte
 }
 
-func NewAcia6551() *Acia6551 {
-	fmt.Println("Resetting the Acia6551")
+func NewAcia6551(cpu *Cpu) *Acia6551 {
 	acia := &Acia6551{}
 	acia.Reset()
 	return acia
@@ -54,6 +58,11 @@ func (a *Acia6551) Reset() {
 	a.lastTxWrite = 0
 	a.lastRxRead = 0
 	a.overrun = false
+
+	a.rxInterruptEnabled = false
+	a.txInterruptEnabled = false
+
+	a.InterruptChan = make(chan bool, 0)
 }
 
 func (a *Acia6551) Size() int {
@@ -91,7 +100,9 @@ func (a *Acia6551) RxWrite(data byte) {
 	a.rx = data
 	a.rxFull = true
 
-	// TODO: IRQs
+	if a.rxInterruptEnabled {
+		// getbus.assertIrq()
+	}
 }
 
 func (a *Acia6551) statusRegister() byte {
@@ -153,7 +164,6 @@ func (a *Acia6551) HasRx() bool {
 func (a *Acia6551) debugTxOutput() {
 	if a.HasTx() {
 		a.TxChan <- a.TxRead()
-		fmt.Printf("%c", a.TxRead())
 	}
 }
 
