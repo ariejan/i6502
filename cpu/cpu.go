@@ -20,7 +20,12 @@ const (
 
 // Beginning of the stack.
 // The stack grows downward, so it starts at 0x1FF
-const StackBase = 0x0100
+const (
+	StackBase   = 0x0100
+	NmiVector   = 0xFFFA // + 0xFFFB
+	ResetVector = 0xFFFC // + 0xFFFD
+	IrqVector   = 0xFFFE // + 0xFFFF
+)
 
 type Cpu struct {
 	// Program counter
@@ -42,7 +47,8 @@ type Cpu struct {
 	// Memory bus
 	Bus *bus.Bus
 
-	InterruptChan chan bool
+	IrqChan chan bool
+	NmiChan chan bool
 
 	// Handle exiting
 	ExitChan chan int
@@ -53,7 +59,7 @@ type Cpu struct {
 // address 0xFFFC into the Program Counter. Note this is a 16 bit value, read from
 // 0xFFFC-FFFD
 func (c *Cpu) Reset() {
-	c.PC = c.Bus.Read16(0xFFFC)
+	c.PC = c.Bus.Read16(ResetVector)
 	c.SR = 0x34
 }
 
@@ -65,7 +71,15 @@ func (c *Cpu) String() string {
 	)
 }
 
-func (c *Cpu) handleInterrupt(returnPC uint16) {
+func (c *Cpu) handleIrq(returnPC uint16) {
+	c.handleInterrupt(returnPC, IrqVector)
+}
+
+func (c *Cpu) handleNmi() {
+	c.handleInterrupt(c.PC, NmiVector)
+}
+
+func (c *Cpu) handleInterrupt(returnPC uint16, vector uint16) {
 	c.setStatus(sBreak, true)
 
 	// Push PC + 1 onto stack
@@ -77,7 +91,7 @@ func (c *Cpu) handleInterrupt(returnPC uint16) {
 	// Disable interrupts
 	c.setStatus(sInterrupt, true)
 
-	c.PC = c.Bus.Read16(0xFFFE)
+	c.PC = c.Bus.Read16(vector)
 }
 
 func (c *Cpu) stackPush(data byte) {
@@ -92,11 +106,13 @@ func (c *Cpu) stackPop() byte {
 
 func (c *Cpu) Step() {
 	select {
-	case <-c.InterruptChan:
+	case <-c.IrqChan:
 		if !c.getStatus(sInterrupt) {
 			// Handle interrupt
-			c.handleInterrupt(c.PC)
+			c.handleIrq(c.PC)
 		}
+	case <-c.NmiChan:
+		c.handleNmi()
 	default:
 		// Read the instruction (including operands)
 		instruction := ReadInstruction(c.PC, c.Bus)
@@ -105,13 +121,19 @@ func (c *Cpu) Step() {
 		// on the size of the optype we just read.
 		c.PC += uint16(instruction.Bytes)
 
+		fmt.Printf(instruction.String())
+
 		// Execute the instruction
 		c.execute(instruction)
 	}
 }
 
 func (c *Cpu) stackHead(offset int8) uint16 {
-	return uint16(StackBase) + uint16(c.SP) + uint16(offset)
+	address := uint16(StackBase) + uint16(c.SP) + uint16(offset)
+	val8 := c.Bus.Read(address)
+	val16 := c.Bus.Read16(address)
+	fmt.Printf("Addressing Stack at 0x%04X (8: 0x%02X; 16: 0x%04X from PC 0x%04X\n", address, val8, val16, c.PC)
+	return address
 }
 
 func (c *Cpu) resolveOperand(in Instruction) uint8 {
@@ -285,6 +307,8 @@ func (c *Cpu) execute(in Instruction) {
 		c.ROL(in)
 	case ror:
 		c.ROR(in)
+	case rti:
+		c.RTI(in)
 	case rts:
 		c.RTS(in)
 	case sbc:
@@ -393,10 +417,13 @@ func (c *Cpu) BPL(in Instruction) {
 
 // BRK: software interrupt
 func (c *Cpu) BRK(in Instruction) {
+	fmt.Println("BRK:", c)
+	c.ExitChan <- 42
+
 	// Force interrupt
-	if !c.getStatus(sInterrupt) {
-		c.handleInterrupt(c.PC + 1)
-	}
+	// if !c.getStatus(sInterrupt) {
+	// 	c.handleIrq(c.PC + 1)
+	// }
 }
 
 // CLC: Clear carry flag.
@@ -595,11 +622,18 @@ func (c *Cpu) ROR(in Instruction) {
 	}
 }
 
-// RTS: Return from subroutine.
-func (c *Cpu) RTS(in Instruction) {
+// RTI: Return from interrupt
+func (c *Cpu) RTI(in Instruction) {
+	c.SR = c.stackPop()
 	c.PC = c.Bus.Read16(c.stackHead(1))
 	c.SP += 2
-	c.PC += 1
+	fmt.Printf("RTI: Returning to 0x%04X", c.PC)
+}
+
+// RTS: Return from subroutine.
+func (c *Cpu) RTS(in Instruction) {
+	c.PC = c.Bus.Read16(c.stackHead(1)) + 1
+	c.SP += 2
 }
 
 // SBC: Subtract memory with borrow from accumulator.

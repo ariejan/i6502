@@ -58,7 +58,7 @@ func (bus *Bus) backendFor(address uint16) (memory.Memory, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("No module addressable at 0x%04X", address)
+	return nil, fmt.Errorf("No module addressable at 0x%04X\n", address)
 }
 
 // Read an 8-bit value from the module mapped on the bus at the
@@ -66,7 +66,9 @@ func (bus *Bus) backendFor(address uint16) (memory.Memory, error) {
 func (bus *Bus) Read(address uint16) byte {
 	memory, err := bus.backendFor(address)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Reading from invalid address $%04X. Returning $00\n", address)
+		return 0x00
+		// panic(err)
 	}
 
 	value := memory.Read(address)
@@ -78,7 +80,9 @@ func (bus *Bus) Read(address uint16) byte {
 func (bus *Bus) Write(address uint16, value byte) {
 	memory, err := bus.backendFor(address)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Writing to invalid address $%04X. Faking write.\n", address)
+		return
+		// panic(err)
 	}
 
 	memory.Write(address, value)

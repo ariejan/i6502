@@ -5,6 +5,7 @@ import (
 	"github.com/ariejan/i6502/cpu"
 	"github.com/ariejan/i6502/devices"
 	"github.com/ariejan/i6502/memory"
+	"os"
 )
 
 type Machine struct {
@@ -22,7 +23,8 @@ type Machine struct {
 // Creates a new i6502 Machine instance
 func CreateMachine() *Machine {
 	// Channel for handling interrupts
-	interruptChan := make(chan bool, 0)
+	irqChan := make(chan bool, 0)
+	nmiChan := make(chan bool, 0)
 
 	ram := memory.CreateRam()
 
@@ -31,14 +33,16 @@ func CreateMachine() *Machine {
 		panic(err)
 	}
 
-	acia6551 := devices.NewAcia6551(interruptChan)
+	acia6551 := devices.NewAcia6551(irqChan)
+	via6522 := devices.NewVia6522(irqChan)
 
 	bus, _ := bus.CreateBus()
 	bus.Attach(ram, "32kB RAM", 0x0000)
 	bus.Attach(rom, "16kB ROM", 0xC000)
+	bus.Attach(via6522, "VIA 6522 Parallel", 0x8000)
 	bus.Attach(acia6551, "ACIA 6551 Serial", 0x8800)
 
-	cpu := &cpu.Cpu{Bus: bus, InterruptChan: interruptChan, ExitChan: make(chan int, 0)}
+	cpu := &cpu.Cpu{Bus: bus, IrqChan: irqChan, NmiChan: nmiChan, ExitChan: make(chan int, 0)}
 
 	machine := &Machine{SerialTx: make(chan byte, 256), SerialRx: make(chan byte, 256), cpu: cpu, bus: bus}
 
@@ -65,6 +69,16 @@ func CreateMachine() *Machine {
 			select {
 			case data := <-machine.SerialRx:
 				acia6551.RxWrite(data)
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-machine.cpu.ExitChan:
+				ram.Dump("intcore")
+				os.Exit(42)
 			}
 		}
 	}()

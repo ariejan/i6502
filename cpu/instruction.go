@@ -17,6 +17,21 @@ type Instruction struct {
 	Op16 uint16
 }
 
+func (i *Instruction) String() string {
+	var output string
+
+	switch i.Bytes {
+	case 1:
+		output = fmt.Sprintf("0x%02X - %s\n", i.Opcode, instructionNames[i.id])
+	case 2:
+		output = fmt.Sprintf("0x%02X - %s %02X\n", i.Opcode, instructionNames[i.id], i.Op8)
+	case 3:
+		output = fmt.Sprintf("0x%02X - %s %04X\n", i.Opcode, instructionNames[i.id], i.Op16)
+	}
+
+	return output
+}
+
 func ReadInstruction(pc uint16, bus *bus.Bus) Instruction {
 	// Read the opcode
 	opcode := bus.Read(pc)
@@ -24,7 +39,7 @@ func ReadInstruction(pc uint16, bus *bus.Bus) Instruction {
 	// Do we know this opcode in our optypes table?
 	optype, ok := optypes[opcode]
 	if !ok {
-		panic(fmt.Sprintf("Unknown opcode $%02X at $04X", opcode, pc))
+		panic(fmt.Sprintf("Unknown opcode $%02X at $%04X", opcode, pc))
 	}
 
 	instruction := Instruction{OpType: optype}
