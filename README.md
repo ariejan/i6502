@@ -1,5 +1,7 @@
 # i6502 - A 6502/65C02 Emulator
 
+[![Build Status](https://travis-ci.org/ariejan/i6502.svg?branch=master)](https://travis-ci.org/ariejan/i6502)
+
 The i6502 is a emulator/soft-prototype of a hardward device I'm building.
 
 The goal of this project is to learn more about the following:
