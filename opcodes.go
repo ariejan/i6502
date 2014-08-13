@@ -143,4 +143,13 @@ type OpType struct {
 
 var opTypes = map[uint8]OpType{
 	0xEA: OpType{0xEA, nop, implied, 1, 2},
+
+	0x69: OpType{0x69, adc, immediate, 2, 2},
+	0x65: OpType{0x65, adc, zeropage, 2, 2},
+	0x75: OpType{0x75, adc, zeropageX, 2, 4},
+	0x6D: OpType{0x6D, adc, absolute, 3, 4},
+	0x7D: OpType{0x7D, adc, absoluteX, 3, 4},
+	0x79: OpType{0x79, adc, absoluteY, 3, 4},
+	0x61: OpType{0x61, adc, indirectX, 2, 6},
+	0x71: OpType{0x71, adc, indirectY, 2, 5},
 }

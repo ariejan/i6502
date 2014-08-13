@@ -15,7 +15,7 @@ const (
 	relative
 	zeropage
 	zeropageX
-	zoerpageY
+	zeropageY
 )
 
 var addressingNames = [...]string{
