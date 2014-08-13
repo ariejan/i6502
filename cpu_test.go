@@ -1,17 +1,13 @@
 package i6502
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestNewCpu(t *testing.T) {
 	cpu, err := NewCpu()
 
-	if err != nil {
-		t.Errorf("Expected NewCPU() to not raise an error")
-	}
-
-	if cpu == nil {
-		t.Errorf("Expected NewCPU() to create a new CPU instance")
-	}
+	assert.NotNil(t, cpu)
+	assert.Nil(t, err)
 }
