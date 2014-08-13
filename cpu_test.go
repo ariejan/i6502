@@ -63,3 +63,10 @@ func TestProgramLoading(t *testing.T) {
 
 	assert.Equal(0x0300, cpu.PC)
 }
+
+func TestNOP(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0xEA}, 0x0300)
+	cpu.Step()
+	assert.Equal(t, 0x0301, cpu.PC)
+}

@@ -1,5 +1,7 @@
 package i6502
 
+import "fmt"
+
 type Cpu struct {
 	bus *AddressBus // The address bus
 
@@ -34,4 +36,15 @@ func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	}
 
 	c.PC = location
+}
+
+// Execute the instruction pointed to by the Program Counter (PC)
+func (c *Cpu) Step() {
+	instruction := c.readNextInstruction()
+	c.PC += uint16(instruction.Size)
+	fmt.Println(instruction)
+	c.execute(instruction)
+}
+
+func (c *Cpu) execute(instruction Instruction) {
 }
