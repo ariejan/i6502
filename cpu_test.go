@@ -12,6 +12,8 @@ func NewRamMachine() (*Cpu, *AddressBus, *Ram) {
 	bus.Attach(ram, 0x0000)
 	cpu, _ := NewCpu(bus)
 
+	cpu.Reset()
+
 	return cpu, bus, ram
 }
 
@@ -29,7 +31,7 @@ func TestCpuAddressBus(t *testing.T) {
 	assert.True(cpu.HasAddressBus())
 }
 
-func TestCpuState(t *testing.T) {
+func TestCpuReset(t *testing.T) {
 	assert := assert.New(t)
 
 	cpu, _, _ := NewRamMachine()
@@ -45,4 +47,19 @@ func TestCpuState(t *testing.T) {
 
 	// Read PC from $FFFC-FFFD
 	assert.Equal(0x1234, cpu.PC)
+}
+
+func TestProgramLoading(t *testing.T) {
+	assert := assert.New(t)
+
+	program := []byte{0xEA, 0xEB, 0xEC}
+
+	cpu, bus, _ := NewRamMachine()
+	cpu.LoadProgram(program, 0x0300)
+
+	assert.Equal(0xEA, bus.Read(0x0300))
+	assert.Equal(0xEB, bus.Read(0x0301))
+	assert.Equal(0xEC, bus.Read(0x0302))
+
+	assert.Equal(0x0300, cpu.PC)
 }
