@@ -7,6 +7,7 @@ type Cpu struct {
 
 	PC uint16 // 16-bit program counter
 	P  byte   // Status Register
+	SP byte   // Stack Pointer
 
 	A byte // Accumulator
 	X byte // X index register
@@ -52,8 +53,74 @@ func (c *Cpu) Step() {
 
 func (c *Cpu) execute(instruction Instruction) {
 	switch instruction.opcodeId {
+	case nop:
+		break
 	case adc:
 		c.ADC(instruction)
+	case sbc:
+		c.SBC(instruction)
+	case sec:
+		c.setCarry(true)
+	case sed:
+		c.setDecimal(true)
+	case sei:
+		c.setInterrupt(true)
+	case clc:
+		c.setCarry(false)
+	case cld:
+		c.setDecimal(false)
+	case cli:
+		c.setInterrupt(false)
+	case clv:
+		c.setOverflow(false)
+	case inx:
+		c.setX(c.X + 1)
+	case iny:
+		c.setY(c.Y + 1)
+	case inc:
+		c.INC(instruction)
+	case dex:
+		c.setX(c.X - 1)
+	case dey:
+		c.setY(c.Y - 1)
+	case dec:
+		c.DEC(instruction)
+	case lda:
+		c.LDA(instruction)
+	case ldx:
+		c.LDX(instruction)
+	case ldy:
+		c.LDY(instruction)
+	case ora:
+		c.ORA(instruction)
+	case and:
+		c.AND(instruction)
+	case eor:
+		c.EOR(instruction)
+	case sta:
+		c.STA(instruction)
+	case stx:
+		c.STX(instruction)
+	case sty:
+		c.STY(instruction)
+	case tax:
+		c.setX(c.A)
+	case tay:
+		c.setY(c.A)
+	case txa:
+		c.setA(c.X)
+	case tya:
+		c.setA(c.Y)
+	case tsx:
+		c.setX(c.SP)
+	case txs:
+		c.setSP(c.X)
+	case asl:
+		c.ASL(instruction)
+	case lsr:
+		c.LSR(instruction)
+	default:
+		panic(fmt.Errorf("Unimplemented instruction: %s", instruction))
 	}
 }
 
