@@ -30,24 +30,3 @@ func (i Instruction) String() (output string) {
 
 	return
 }
-
-func (c *Cpu) readNextInstruction() Instruction {
-	// Read the opcode
-	opcode := c.bus.Read(c.PC)
-
-	optype, ok := opTypes[opcode]
-	if !ok {
-		panic(fmt.Sprintf("Unknown or unimplemented opcode 0x%02X\n%s", opcode, c.String()))
-	}
-
-	instruction := Instruction{OpType: optype, Address: c.PC}
-	switch instruction.Size {
-	case 1: // Zero operand instruction
-	case 2: // 8-bit operand
-		instruction.Op8 = c.bus.Read(c.PC + 1)
-	case 3: // 16-bit operand
-		instruction.Op16 = c.bus.Read16(c.PC + 1)
-	}
-
-	return instruction
-}
