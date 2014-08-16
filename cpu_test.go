@@ -1,7 +1,9 @@
 package i6502
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"testing"
 )
 
@@ -15,6 +17,39 @@ func NewRamMachine() (*Cpu, *AddressBus, *Ram) {
 	cpu.Reset()
 
 	return cpu, bus, ram
+}
+
+func loadProgram(path string) []byte {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot open program file '%s'\n.", path))
+	}
+
+	return data
+}
+
+func TestKlausDormann6502(t *testing.T) {
+	fmt.Println("Running Klaus Dormann' 6502 functional tests. This may take some time...")
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram(loadProgram("test/6502_functional_test.bin"), 0x0000)
+	cpu.PC = 0x0400
+	prevPC := uint16(0x0400)
+
+	for {
+		cpu.Step()
+
+		if cpu.PC == prevPC {
+			if cpu.PC != 0x3399 {
+				str := "Looping PC detected at PC 0x%04X. We've hit a failing Klaus Dormann test."
+				panic(fmt.Sprintf(str, cpu.PC))
+			} else {
+				fmt.Println("Klaus Dormann's 6502 functional tests passed.")
+				break
+			}
+		}
+
+		prevPC = cpu.PC
+	}
 }
 
 func TestNewCpu(t *testing.T) {
@@ -35,9 +70,7 @@ func TestCpuReset(t *testing.T) {
 	assert := assert.New(t)
 
 	cpu, _, _ := NewRamMachine()
-
-	cpu.bus.Write(0xFFFC, 0x34)
-	cpu.bus.Write(0xFFFD, 0x12)
+	cpu.bus.Write16(0xFFFC, 0x1234)
 
 	cpu.Reset()
 
@@ -47,6 +80,28 @@ func TestCpuReset(t *testing.T) {
 
 	// Read PC from $FFFC-FFFD
 	assert.Equal(0x1234, cpu.PC)
+}
+
+func TestCpuInterrupt(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	cpu.bus.Write16(0xFFFE, 0x1234) // Write the IRQ vector
+	cpu.setIrqDisable(false)        // Enable interrupts
+	cpu.SP = 0xFF                   // Set the stack pointer
+	cpu.PC = 0x0380                 // Some fake point of execution
+
+	assert.Equal(t, 0xFF, cpu.SP)
+
+	status := cpu.P
+
+	// Trigger IRQ
+	cpu.Interrupt()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+	assert.Equal(t, 0x03, cpu.bus.Read(0x01FF))
+	assert.Equal(t, 0x80, cpu.bus.Read(0x01FE))
+	assert.Equal(t, status, cpu.bus.Read(0x01FD))
+	assert.True(t, cpu.getIrqDisable())
 }
 
 func TestProgramLoading(t *testing.T) {
@@ -94,11 +149,11 @@ func TestSED(t *testing.T) {
 func TestSEI(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x78}, 0x0300)
-	cpu.setInterrupt(false)
+	cpu.setIrqDisable(false)
 
-	assert.False(t, cpu.getInterrupt())
+	assert.False(t, cpu.getIrqDisable())
 	cpu.Step()
-	assert.True(t, cpu.getInterrupt())
+	assert.True(t, cpu.getIrqDisable())
 }
 
 func TestCLC(t *testing.T) {
@@ -124,11 +179,11 @@ func TestCLD(t *testing.T) {
 func TestCLI(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x58}, 0x0300)
-	cpu.setInterrupt(true)
+	cpu.setIrqDisable(true)
 
-	assert.True(t, cpu.getInterrupt())
+	assert.True(t, cpu.getIrqDisable())
 	cpu.Step()
-	assert.False(t, cpu.getInterrupt())
+	assert.False(t, cpu.getIrqDisable())
 }
 
 func TestCLV(t *testing.T) {
@@ -376,7 +431,7 @@ func TestSBCDecimal(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x29, cpu.A)
+	assert.Equal(t, 0x28, cpu.A)
 }
 
 func TestSBCZero(t *testing.T) {
@@ -925,10 +980,10 @@ func TestLDYZeropage(t *testing.T) {
 	assert.Equal(t, 0xF8, cpu.Y)
 }
 
-func TestLDYZeropageY(t *testing.T) {
+func TestLDYZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xB4, 0x41}, 0x0300)
-	cpu.Y = 0x01
+	cpu.X = 0x01
 	cpu.bus.Write(0x42, 0xF8)
 
 	cpu.Step()
@@ -948,10 +1003,10 @@ func TestLDYAbsolute(t *testing.T) {
 	assert.Equal(t, 0xF8, cpu.Y)
 }
 
-func TestLDYAbsoluteY(t *testing.T) {
+func TestLDYAbsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xBC, 0x00, 0x80}, 0x0300)
-	cpu.Y = 0x02
+	cpu.X = 0x02
 	cpu.bus.Write16(0x8002, 0xF8)
 
 	cpu.Step()
@@ -1701,30 +1756,6 @@ func TestTXS(t *testing.T) {
 	assert.Equal(t, 0x42, cpu.SP)
 }
 
-func TestTXSNegative(t *testing.T) {
-	cpu, _, _ := NewRamMachine()
-	cpu.LoadProgram([]byte{0x9A}, 0x0300)
-	cpu.X = 0xE0
-
-	cpu.Step()
-
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.SP)
-	assert.True(t, cpu.getNegative())
-}
-
-func TestTXSZero(t *testing.T) {
-	cpu, _, _ := NewRamMachine()
-	cpu.LoadProgram([]byte{0x9A}, 0x0300)
-	cpu.X = 0x00
-
-	cpu.Step()
-
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.SP)
-	assert.True(t, cpu.getZero())
-}
-
 //// ASL
 
 func TestASLaccumulator(t *testing.T) {
@@ -1961,4 +1992,1240 @@ func TestLSRabsoluteX(t *testing.T) {
 
 	assert.Equal(t, 0x0303, cpu.PC)
 	assert.Equal(t, 0x02, cpu.bus.Read(0x8002))
+}
+
+//// ROL
+
+func TestROLAccumulator(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x2A}, 0x0300)
+	cpu.A = 0x01
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x02, cpu.A)
+}
+
+func TestROLAccumulatorZeroAndCarry(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x2A}, 0x0300)
+
+	cpu.setCarry(false)
+	cpu.A = 0x80
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x00, cpu.A)
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getCarry())
+}
+
+func TestROLAccumulatorNegative(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x2A}, 0x0300)
+
+	cpu.setCarry(false)
+	cpu.A = 0x40
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x80, cpu.A)
+	assert.True(t, cpu.getNegative())
+}
+
+func TestROLZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x26, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x01)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.Equal(t, 0x02, cpu.bus.Read(0x0080))
+}
+
+func TestROLZeropageX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x36, 0x80}, 0x0300)
+	cpu.X = 0x02
+	cpu.bus.Write(0x0082, 0x01)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.Equal(t, 0x02, cpu.bus.Read(0x0082))
+}
+
+func TestROLAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x2E, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x01)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.Equal(t, 0x02, cpu.bus.Read(0x8000))
+}
+
+func TestROLAbsoluteX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x3E, 0x00, 0x80}, 0x0300)
+	cpu.X = 0x02
+	cpu.bus.Write(0x8002, 0x01)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.Equal(t, 0x02, cpu.bus.Read(0x8002))
+}
+
+//// ROR
+
+func TestRORAccumulator(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x6A}, 0x0300)
+	cpu.A = 0x02
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x01, cpu.A)
+}
+
+func TestRORAccumulatorZeroAndCarry(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x6A}, 0x0300)
+
+	cpu.setCarry(false)
+	cpu.A = 0x01
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x00, cpu.A)
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getCarry())
+}
+
+func TestRORAccumulatorNegative(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x6A}, 0x0300)
+
+	cpu.setCarry(true)
+	cpu.A = 0x01
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0x80, cpu.A)
+	assert.True(t, cpu.getNegative())
+}
+
+func TestRORZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x66, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x02)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.Equal(t, 0x01, cpu.bus.Read(0x0080))
+}
+
+func TestRORZeropageX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x76, 0x80}, 0x0300)
+	cpu.X = 0x02
+	cpu.bus.Write(0x0082, 0x02)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.Equal(t, 0x01, cpu.bus.Read(0x0082))
+}
+
+func TestRORAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x6E, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x02)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.Equal(t, 0x01, cpu.bus.Read(0x8000))
+}
+
+func TestRORAbsoluteX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x7E, 0x00, 0x80}, 0x0300)
+	cpu.X = 0x02
+	cpu.bus.Write(0x8002, 0x02)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.Equal(t, 0x01, cpu.bus.Read(0x8002))
+}
+
+/// CMP
+
+func TestCMPImmediate(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xC9, 0x42}, 0x0300)
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xC9, 0x42}, 0x0300)
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xC9, 0x0A}, 0x0300)
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x0A)
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPZeropageX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0082, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0082, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
+	cpu.bus.Write(0x0082, 0x0A)
+	cpu.X = 0x02
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x0A)
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPAbsoluteX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x0A)
+	cpu.X = 0x02
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPAbsoluteY(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x42)
+	cpu.Y = 0x02
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x42)
+	cpu.Y = 0x02
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8002, 0x0A)
+	cpu.Y = 0x02
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPIndirectX(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0082, 0xC000)
+	cpu.bus.Write(0xC000, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0082, 0xC000)
+	cpu.bus.Write(0xC000, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0082, 0xC000)
+	cpu.bus.Write(0xC000, 0x0A)
+	cpu.X = 0x02
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCMPIndirectY(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0080, 0xC000)
+	cpu.bus.Write(0xC002, 0x42)
+	cpu.Y = 0x02
+	cpu.A = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0080, 0xC000)
+	cpu.bus.Write(0xC002, 0x42)
+	cpu.X = 0x02
+	cpu.A = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
+	cpu.bus.Write16(0x0080, 0xC000)
+	cpu.bus.Write(0xC002, 0x0A)
+	cpu.X = 0x02
+	cpu.A = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+//// CPX
+
+func TestCPXImmediate(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xE0, 0x42}, 0x0300)
+	cpu.X = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xE0, 0x42}, 0x0300)
+	cpu.X = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xE0, 0x0A}, 0x0300)
+	cpu.X = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCPXZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.X = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.X = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x0A)
+	cpu.X = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCPXAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.X = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.X = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x0A)
+	cpu.X = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+//// CPY
+
+func TestCPYImmediate(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xC0, 0x42}, 0x0300)
+	cpu.Y = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xC0, 0x42}, 0x0300)
+	cpu.Y = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xC0, 0x0A}, 0x0300)
+	cpu.Y = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCPYZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.Y = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x42)
+	cpu.Y = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
+	cpu.bus.Write(0x0080, 0x0A)
+	cpu.Y = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+func TestCPYAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	// Equality
+	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.Y = 0x42
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Greater Than
+	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x42)
+	cpu.Y = 0x43
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.True(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+
+	// Less Than
+	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
+	cpu.bus.Write(0x8000, 0x0A)
+	cpu.Y = 0x08
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.False(t, cpu.getCarry())
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+}
+
+//// BRK
+
+func TestBRK(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x00}, 0x0300)
+	cpu.bus.Write16(IrqVector, 0x1234)
+	cpu.SP = 0xFF
+	status := cpu.P
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+	assert.Equal(t, 0x03, cpu.bus.Read(0x01FF))
+	assert.Equal(t, 0x02, cpu.bus.Read(0x01FE))
+	assert.Equal(t, status, cpu.bus.Read(0x01FD))
+	assert.True(t, cpu.getBreak())
+
+}
+
+//// BCC
+
+func TestBCC(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x90, 0x05}, 0x0300)
+	cpu.setCarry(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x90, 0x05}, 0x0300)
+	cpu.setCarry(false)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x90, 0xfb}, 0x0300)
+	cpu.setCarry(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x90, 0xFB}, 0x0300)
+	cpu.setCarry(false)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+}
+
+//// BCS
+
+func TestBCS(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xB0, 0x05}, 0x0300)
+	cpu.setCarry(true)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xB0, 0x05}, 0x0300)
+	cpu.setCarry(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xB0, 0xfb}, 0x0300)
+	cpu.setCarry(true)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xB0, 0xFB}, 0x0300)
+	cpu.setCarry(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+}
+
+//// BNE
+
+func TestBNE(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xD0, 0x05}, 0x0300)
+	cpu.setZero(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xD0, 0x05}, 0x0300)
+	cpu.setZero(false)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xD0, 0xfb}, 0x0300)
+	cpu.setZero(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xD0, 0xFB}, 0x0300)
+	cpu.setZero(false)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+}
+
+//// BEQ
+
+func TestBEQ(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xF0, 0x05}, 0x0300)
+	cpu.setZero(true)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xF0, 0x05}, 0x0300)
+	cpu.setZero(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0xF0, 0xfb}, 0x0300)
+	cpu.setZero(true)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0xF0, 0xFB}, 0x0300)
+	cpu.setZero(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+}
+
+//// BPL
+
+func TestBPL(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x10, 0x05}, 0x0300)
+	cpu.setNegative(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x10, 0x05}, 0x0300)
+	cpu.setNegative(false)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x10, 0xfb}, 0x0300)
+	cpu.setNegative(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x10, 0xFB}, 0x0300)
+	cpu.setNegative(false)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+}
+
+//// BMI
+
+func TestBMI(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x30, 0x05}, 0x0300)
+	cpu.setNegative(true)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x30, 0x05}, 0x0300)
+	cpu.setNegative(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x30, 0xfb}, 0x0300)
+	cpu.setNegative(true)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x30, 0xFB}, 0x0300)
+	cpu.setNegative(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+}
+
+//// BVC
+
+func TestBVC(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x50, 0x05}, 0x0300)
+	cpu.setOverflow(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x50, 0x05}, 0x0300)
+	cpu.setOverflow(false)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x50, 0xfb}, 0x0300)
+	cpu.setOverflow(true)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x50, 0xFB}, 0x0300)
+	cpu.setOverflow(false)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+}
+
+//// BVS
+
+func TestBVS(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	/// Positive offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x70, 0x05}, 0x0300)
+	cpu.setOverflow(true)
+	cpu.Step()
+	// 0x0302 + 0x05 = 0x0307
+	assert.Equal(t, 0x0307, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x70, 0x05}, 0x0300)
+	cpu.setOverflow(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+
+	/// Negative offset
+	// Carry set
+	cpu.LoadProgram([]byte{0x70, 0xfb}, 0x0300)
+	cpu.setOverflow(true)
+	cpu.Step()
+	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
+	assert.Equal(t, 0x02FD, cpu.PC)
+
+	// Carry not set
+	cpu.LoadProgram([]byte{0x70, 0xFB}, 0x0300)
+	cpu.setOverflow(false)
+	cpu.Step()
+	assert.Equal(t, 0x0302, cpu.PC)
+}
+
+//// BIT
+
+func TestBITZeropage(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	cpu.bus.Write(0x0000, 0xC0)
+	cpu.bus.Write(0x0010, 0x40)
+	cpu.bus.Write(0x0020, 0x80)
+
+	cpu.LoadProgram([]byte{0x24, 0x00}, 0x0300)
+	cpu.A = 0x01
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x24, 0x20}, 0x0300)
+	cpu.A = 0x40
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.False(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x24, 0x10}, 0x0300)
+	cpu.A = 0x80
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x24, 0x00}, 0x0300)
+	cpu.A = 0xC0
+	cpu.Step()
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x24, 0x00}, 0x0300)
+	cpu.A = 0xFF
+	cpu.Step()
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+}
+
+func TestBITAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+
+	cpu.bus.Write(0xC000, 0xC0)
+	cpu.bus.Write(0xC010, 0x40)
+	cpu.bus.Write(0xC020, 0x80)
+
+	cpu.LoadProgram([]byte{0x2C, 0x00, 0xC0}, 0x0300)
+	cpu.A = 0x01
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x2C, 0x20, 0xC0}, 0x0300)
+	cpu.A = 0x40
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.False(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x2C, 0x10, 0xC0}, 0x0300)
+	cpu.A = 0x80
+	cpu.Step()
+	assert.True(t, cpu.getZero())
+	assert.False(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x2C, 0x00, 0xC0}, 0x0300)
+	cpu.A = 0xC0
+	cpu.Step()
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+
+	cpu.LoadProgram([]byte{0x2C, 0x00, 0xC0}, 0x0300)
+	cpu.A = 0xFF
+	cpu.Step()
+	assert.False(t, cpu.getZero())
+	assert.True(t, cpu.getNegative())
+	assert.True(t, cpu.getOverflow())
+}
+
+//// PHP
+
+func TestPHP(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x08}, 0x0300)
+	cpu.SP = 0xFF
+	cpu.P = 0xB5
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0xFE, cpu.SP)
+	assert.Equal(t, 0xB5, cpu.bus.Read(0x01FF))
+}
+
+//// PLP
+
+func TestPLP(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x28}, 0x0300)
+	cpu.stackPush(0xB5)
+	cpu.P = 0x34
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0xFF, cpu.SP)
+	assert.Equal(t, 0xB5, cpu.P)
+}
+
+//// PHA
+
+func TestPHA(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x48}, 0x0300)
+	cpu.SP = 0xFF
+	cpu.A = 0xB5
+
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0xFE, cpu.SP)
+	assert.Equal(t, 0xB5, cpu.bus.Read(0x01FF))
+}
+
+//// PLP
+
+func TestPLA(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x68, 0x68, 0x68}, 0x0300)
+
+	cpu.stackPush(0x42)
+	cpu.Step()
+
+	assert.Equal(t, 0x0301, cpu.PC)
+	assert.Equal(t, 0xFF, cpu.SP)
+	assert.Equal(t, 0x42, cpu.A)
+
+	cpu.stackPush(0xB5)
+	cpu.Step()
+
+	assert.Equal(t, 0x0302, cpu.PC)
+	assert.Equal(t, 0xFF, cpu.SP)
+	assert.Equal(t, 0xB5, cpu.A)
+	assert.True(t, cpu.getNegative())
+
+	cpu.stackPush(0x00)
+	cpu.Step()
+
+	assert.Equal(t, 0x0303, cpu.PC)
+	assert.Equal(t, 0xFF, cpu.SP)
+	assert.Equal(t, 0x00, cpu.A)
+	assert.True(t, cpu.getZero())
+}
+
+//// JMP
+
+func TestJMPAbsolute(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x4C, 0x34, 0x12}, 0x0300)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+}
+
+func TestJMPIndirect(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x6C, 0x00, 0xC0}, 0x0300)
+	cpu.bus.Write16(0xC000, 0x1234)
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+}
+
+//// JSR
+
+func TestJSR(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x20, 0x34, 0x12}, 0x0300)
+	cpu.SP = 0xFF
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+	assert.Equal(t, 0xFD, cpu.SP)
+
+	// We expect PC - 1 (e.g. 3rd byte of JSR) to be on the stack
+	assert.Equal(t, 0x03, cpu.bus.Read(0x1FF))
+	assert.Equal(t, 0x02, cpu.bus.Read(0x1FE))
+}
+
+//// RTS
+
+func TestRTS(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x60}, 0x0300)
+	cpu.P = 0x34
+
+	cpu.stackPush(0x12) // PC HI
+	cpu.stackPush(0x34) // PC LO
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234+1, cpu.PC)
+	assert.Equal(t, 0x34, cpu.P)
+}
+
+//// RTI
+
+func TestRTI(t *testing.T) {
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram([]byte{0x40}, 0x0300)
+
+	cpu.stackPush(0x12) // PC HI
+	cpu.stackPush(0x34) // PC LO
+	cpu.stackPush(0x5B) // P
+
+	cpu.Step()
+
+	assert.Equal(t, 0x1234, cpu.PC)
+	assert.Equal(t, 0x5B|0x20, cpu.P)
 }

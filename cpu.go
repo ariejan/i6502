@@ -16,11 +16,17 @@ type Cpu struct {
 
 const (
 	ResetVector = 0xFFFC // 0xFFFC-FFFD
+	IrqVector   = 0xFFFE // 0xFFFE-FFFF
 )
 
 // Create an new Cpu instance with the specified AddressBus
 func NewCpu(bus *AddressBus) (*Cpu, error) {
 	return &Cpu{bus: bus}, nil
+}
+
+func (c *Cpu) String() string {
+	str := ">>> CPU [  A ] [  X ] [  Y ] [ SP ] [  PC  ] NVxBDIZC\n>>>      0x%02X   0x%02X   0x%02X   0x%02X   0x%04X  %08b\n"
+	return fmt.Sprintf(str, c.A, c.X, c.Y, c.SP, c.PC, c.P)
 }
 
 func (c *Cpu) HasAddressBus() bool {
@@ -31,6 +37,27 @@ func (c *Cpu) HasAddressBus() bool {
 func (c *Cpu) Reset() {
 	c.PC = c.bus.Read16(ResetVector)
 	c.P = 0x34
+
+	// Not specified, but let's clean up
+	c.A = 0x00
+	c.X = 0x00
+	c.Y = 0x00
+	c.SP = 0xFF
+}
+
+// Simulate the IRQ pin
+func (c *Cpu) Interrupt() {
+	c.handleIrq(c.PC)
+}
+
+func (c *Cpu) handleIrq(PC uint16) {
+	c.stackPush(byte(PC >> 8))
+	c.stackPush(byte(PC))
+	c.stackPush(c.P)
+
+	c.setIrqDisable(true)
+
+	c.PC = c.bus.Read16(IrqVector)
 }
 
 // Load the specified program data at the given memory location
@@ -45,6 +72,7 @@ func (c *Cpu) LoadProgram(data []byte, location uint16) {
 
 // Execute the instruction pointed to by the Program Counter (PC)
 func (c *Cpu) Step() {
+	// fmt.Println(c)
 	instruction := c.readNextInstruction()
 	c.PC += uint16(instruction.Size)
 	// fmt.Println(instruction)
@@ -64,13 +92,13 @@ func (c *Cpu) execute(instruction Instruction) {
 	case sed:
 		c.setDecimal(true)
 	case sei:
-		c.setInterrupt(true)
+		c.setIrqDisable(true)
 	case clc:
 		c.setCarry(false)
 	case cld:
 		c.setDecimal(false)
 	case cli:
-		c.setInterrupt(false)
+		c.setIrqDisable(false)
 	case clv:
 		c.setOverflow(false)
 	case inx:
@@ -114,13 +142,86 @@ func (c *Cpu) execute(instruction Instruction) {
 	case tsx:
 		c.setX(c.SP)
 	case txs:
-		c.setSP(c.X)
+		c.SP = c.X
 	case asl:
 		c.ASL(instruction)
 	case lsr:
 		c.LSR(instruction)
+	case rol:
+		c.ROL(instruction)
+	case ror:
+		c.ROR(instruction)
+	case cmp:
+		c.CMP(instruction)
+	case cpx:
+		c.CPX(instruction)
+	case cpy:
+		c.CPY(instruction)
+	case brk:
+		c.BRK()
+	case bcc:
+		if !c.getCarry() {
+			c.branch(instruction)
+		}
+	case bcs:
+		if c.getCarry() {
+			c.branch(instruction)
+		}
+	case bne:
+		if !c.getZero() {
+			c.branch(instruction)
+		}
+	case beq:
+		if c.getZero() {
+			c.branch(instruction)
+		}
+	case bpl:
+		if !c.getNegative() {
+			c.branch(instruction)
+		}
+	case bmi:
+		if c.getNegative() {
+			c.branch(instruction)
+		}
+	case bvc:
+		if !c.getOverflow() {
+			c.branch(instruction)
+		}
+	case bvs:
+		if c.getOverflow() {
+			c.branch(instruction)
+		}
+	case bit:
+		c.BIT(instruction)
+	case php:
+		c.stackPush(c.P | 0x30)
+	case plp:
+		c.setP(c.stackPop())
+	case pha:
+		c.stackPush(c.A)
+	case pla:
+		value := c.stackPop()
+		c.setA(value)
+	case jmp:
+		c.JMP(instruction)
+	case jsr:
+		c.JSR(instruction)
+	case rts:
+		c.PC = (uint16(c.stackPop()) | uint16(c.stackPop())<<8) + 1
+	case rti:
+		c.setP(c.stackPop())
+		c.PC = uint16(c.stackPop()) | uint16(c.stackPop())<<8
 	default:
 		panic(fmt.Errorf("Unimplemented instruction: %s", instruction))
+	}
+}
+
+func (c *Cpu) branch(in Instruction) {
+	relative := int8(in.Op8) // Signed!
+	if relative >= 0 {
+		c.PC += uint16(relative)
+	} else {
+		c.PC -= -uint16(relative)
 	}
 }
 

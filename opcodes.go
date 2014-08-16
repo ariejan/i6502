@@ -213,9 +213,9 @@ var opTypes = map[uint8]OpType{
 	// LDY
 	0xA0: OpType{0xA0, ldy, immediate, 2, 2},
 	0xA4: OpType{0xA4, ldy, zeropage, 2, 3},
-	0xB4: OpType{0xB4, ldy, zeropageY, 2, 4},
+	0xB4: OpType{0xB4, ldy, zeropageX, 2, 4},
 	0xAC: OpType{0xAC, ldy, absolute, 3, 4},
-	0xBC: OpType{0xBC, ldy, absoluteY, 3, 4},
+	0xBC: OpType{0xBC, ldy, absoluteX, 3, 4},
 
 	// ORA
 	0x09: OpType{0x09, ora, immediate, 2, 2},
@@ -297,4 +297,82 @@ var opTypes = map[uint8]OpType{
 	0x56: OpType{0x56, lsr, zeropageX, 2, 6},
 	0x4E: OpType{0x4E, lsr, absolute, 3, 6},
 	0x5E: OpType{0x5E, lsr, absoluteX, 3, 7},
+
+	// ROL
+	0x2A: OpType{0x2A, rol, accumulator, 1, 2},
+	0x26: OpType{0x26, rol, zeropage, 2, 5},
+	0x36: OpType{0x36, rol, zeropageX, 2, 6},
+	0x2E: OpType{0x2E, rol, absolute, 3, 6},
+	0x3E: OpType{0x3E, rol, absoluteX, 3, 7},
+
+	// ROR
+	0x6A: OpType{0x6A, ror, accumulator, 1, 2},
+	0x66: OpType{0x66, ror, zeropage, 2, 5},
+	0x76: OpType{0x76, ror, zeropageX, 2, 6},
+	0x6E: OpType{0x6E, ror, absolute, 3, 6},
+	0x7E: OpType{0x7E, ror, absoluteX, 3, 7},
+
+	// CMP
+	0xC9: OpType{0xC9, cmp, immediate, 2, 2},
+	0xC5: OpType{0xC5, cmp, zeropage, 2, 3},
+	0xD5: OpType{0xD5, cmp, zeropageX, 2, 4},
+	0xCD: OpType{0xCD, cmp, absolute, 3, 4},
+	0xDD: OpType{0xDD, cmp, absoluteX, 3, 4},
+	0xD9: OpType{0xD9, cmp, absoluteY, 3, 4},
+	0xC1: OpType{0xC1, cmp, indirectX, 2, 6},
+	0xD1: OpType{0xD1, cmp, indirectY, 2, 5},
+
+	// CPX
+	0xE0: OpType{0xE0, cpx, immediate, 2, 2},
+	0xE4: OpType{0xE4, cpx, zeropage, 2, 3},
+	0xEC: OpType{0xEC, cpx, absolute, 3, 4},
+
+	// CPY
+	0xC0: OpType{0xC0, cpy, immediate, 2, 2},
+	0xC4: OpType{0xC4, cpy, zeropage, 2, 3},
+	0xCC: OpType{0xCC, cpy, absolute, 3, 4},
+
+	// BRK
+	0x00: OpType{0x00, brk, implied, 1, 7},
+
+	// BCC / BCS
+	0x90: OpType{0x90, bcc, relative, 2, 2},
+	0xB0: OpType{0xB0, bcs, relative, 2, 2},
+
+	// BNE / BEQ
+	0xD0: OpType{0xD0, bne, relative, 2, 2},
+	0xF0: OpType{0xF0, beq, relative, 2, 2},
+
+	// BPL / BMI
+	0x10: OpType{0x10, bpl, relative, 2, 2},
+	0x30: OpType{0x30, bmi, relative, 2, 2},
+
+	// BVC / BCS
+	0x50: OpType{0x50, bvc, relative, 2, 2},
+	0x70: OpType{0x70, bvs, relative, 2, 2},
+
+	// BIT
+	0x24: OpType{0x24, bit, zeropage, 2, 3},
+	0x2C: OpType{0x2C, bit, absolute, 3, 4},
+
+	// PHP / PLP
+	0x08: OpType{0x08, php, implied, 1, 3},
+	0x28: OpType{0x28, plp, implied, 1, 4},
+
+	// PHA / PLA
+	0x48: OpType{0x48, pha, implied, 1, 3},
+	0x68: OpType{0x68, pla, implied, 1, 4},
+
+	// JMP
+	0x4C: OpType{0x4C, jmp, absolute, 3, 3},
+	0x6C: OpType{0x6C, jmp, indirect, 3, 5},
+
+	// JSR
+	0x20: OpType{0x20, jsr, absolute, 3, 6},
+
+	// RTS
+	0x60: OpType{0x60, rts, implied, 1, 6},
+
+	// RTI
+	0x40: OpType{0x40, rti, implied, 1, 6},
 }

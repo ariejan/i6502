@@ -4,7 +4,7 @@ package i6502
 const (
 	sCarry = iota
 	sZero
-	sInterrupt
+	sIrqDisable
 	sDecimal
 	sBreak
 	_
@@ -36,8 +36,8 @@ func (c *Cpu) setZero(state bool) {
 	c.setStatus(sZero, state)
 }
 
-func (c *Cpu) setInterrupt(state bool) {
-	c.setStatus(sInterrupt, state)
+func (c *Cpu) setIrqDisable(state bool) {
+	c.setStatus(sIrqDisable, state)
 }
 
 func (c *Cpu) setDecimal(state bool) {
@@ -68,8 +68,8 @@ func (c *Cpu) getZero() bool {
 	return c.getStatus(sZero)
 }
 
-func (c *Cpu) getInterrupt() bool {
-	return c.getStatus(sInterrupt)
+func (c *Cpu) getIrqDisable() bool {
+	return c.getStatus(sIrqDisable)
 }
 
 func (c *Cpu) getDecimal() bool {
@@ -116,4 +116,9 @@ func (c *Cpu) setY(value byte) {
 func (c *Cpu) setSP(value byte) {
 	c.SP = value
 	c.setArithmeticFlags(c.SP)
+}
+
+func (c *Cpu) setP(value byte) {
+	c.P = value
+	c.P |= 0x20
 }

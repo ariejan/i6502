@@ -37,10 +37,10 @@ func (c *Cpu) readNextInstruction() Instruction {
 
 	optype, ok := opTypes[opcode]
 	if !ok {
-		panic(fmt.Sprintf("Unknown or unimplemented opcode 0x%02X", opcode))
+		panic(fmt.Sprintf("Unknown or unimplemented opcode 0x%02X\n%s", opcode, c.String()))
 	}
 
-	instruction := Instruction{OpType: optype}
+	instruction := Instruction{OpType: optype, Address: c.PC}
 	switch instruction.Size {
 	case 1: // Zero operand instruction
 	case 2: // 8-bit operand

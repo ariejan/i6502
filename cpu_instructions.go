@@ -17,6 +17,8 @@ func (c *Cpu) SBC(in Instruction) {
 	operand := c.resolveOperand(in)
 	carryIn := c.getCarryInt()
 
+	// fmt.Printf("SBC: A: 0x%02X V: 0x%02X C: %b D: %v\n", c.A, operand, carryIn, c.getDecimal())
+
 	if c.getDecimal() {
 		c.sbcDecimal(c.A, operand, carryIn)
 	} else {
@@ -117,6 +119,83 @@ func (c *Cpu) LSR(in Instruction) {
 	}
 }
 
+func (c *Cpu) ROL(in Instruction) {
+	carry := c.getCarryInt()
+
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry((c.A & 0x80) != 0)
+		c.A = c.A<<1 | carry
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.bus.Read(address)
+		c.setCarry((value & 0x80) != 0)
+		value = value<<1 | carry
+		c.bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+func (c *Cpu) ROR(in Instruction) {
+	carry := c.getCarryInt()
+
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry(c.A&0x01 == 1)
+		c.A = c.A>>1 | carry<<7
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.bus.Read(address)
+		c.setCarry(value&0x01 == 1)
+		value = value>>1 | carry<<7
+		c.bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+func (c *Cpu) CMP(in Instruction) {
+	value := c.resolveOperand(in)
+	// fmt.Printf("CMP A: 0x%02X V: 0x%02X\n", c.A, value)
+	c.setCarry(c.A >= value)
+	c.setArithmeticFlags(c.A - value)
+}
+
+func (c *Cpu) CPX(in Instruction) {
+	value := c.resolveOperand(in)
+	c.setCarry(c.X >= value)
+	c.setArithmeticFlags(c.X - value)
+}
+
+func (c *Cpu) CPY(in Instruction) {
+	value := c.resolveOperand(in)
+	c.setCarry(c.Y >= value)
+	c.setArithmeticFlags(c.Y - value)
+}
+
+func (c *Cpu) BRK() {
+	c.setBreak(true)
+	c.handleIrq(c.PC + 1)
+}
+
+func (c *Cpu) BIT(in Instruction) {
+	value := c.resolveOperand(in)
+	c.setNegative((value & 0x80) != 0)
+	c.setOverflow((value & 0x40) != 0)
+	c.setZero((c.A & value) == 0)
+}
+
+func (c *Cpu) JMP(in Instruction) {
+	c.PC = c.memoryAddress(in)
+}
+
+func (c *Cpu) JSR(in Instruction) {
+	c.stackPush(byte((c.PC - 1) >> 8))
+	c.stackPush(byte(c.PC - 1))
+	c.PC = c.memoryAddress(in)
+}
+
 // Performs regular, 8-bit addition
 func (c *Cpu) adcNormal(a uint8, b uint8, carryIn uint8) {
 	result16 := uint16(a) + uint16(b) + uint16(carryIn)
@@ -162,7 +241,11 @@ func (c *Cpu) adcDecimal(a uint8, b uint8, carryIn uint8) {
 func (c *Cpu) sbcDecimal(a uint8, b uint8, carryIn uint8) {
 	var carryB uint8 = 0
 
-	carryIn = (carryIn + 1) % 1
+	if carryIn == 0 {
+		carryIn = 1
+	} else {
+		carryIn = 0
+	}
 
 	low := (a & 0x0F) - (b & 0x0F) - carryIn
 	if (low & 0x10) != 0 {
