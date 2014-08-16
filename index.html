@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>I6502 by ariejan</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>I6502</h1>
+        <p>A 6502/65C02 Emulator in Go</p>
+
+        <p class="view"><a href="https://github.com/ariejan/i6502">View the Project on GitHub <small>ariejan/i6502</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/ariejan/i6502/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/ariejan/i6502/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/ariejan/i6502">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a name="i6502---a-6502-emulator" class="anchor" href="#i6502---a-6502-emulator"><span class="octicon octicon-link"></span></a>i6502 - A 6502 Emulator</h1>
+
+<p><a href="https://travis-ci.org/ariejan/i6502"><img src="https://travis-ci.org/ariejan/i6502.svg?branch=master" alt="Build Status"></a></p>
+
+<p>This is an emulator of the i6502 hardward project I'm doing.</p>
+
+<p>It's written in Golang and comes fully tested. </p>
+
+<h2>
+<a name="background" class="anchor" href="#background"><span class="octicon octicon-link"></span></a>Background</h2>
+
+<p>The MOS 6502 Microprocessor has been around sinc 1975 and is used in many popular systems, like
+the Apple II, Amiga 2600, Commodore 64 and the Nintendo Entertainment System (NES).</p>
+
+<p>It features an 8-bit accumulator and ALU, two 8-bit index registers and a 16-bit memory bus, allowing the processor to access up to 64kB of memory. </p>
+
+<p>I/O is mapped to memory, meaning that both RAM, ROM and I/O are addressed over the same 16-bit address bus.</p>
+
+<p>Because of it's simple and elegant design and the plethora of information available about this microprocessor, the 6502 is very useful for learning and hobby projects.</p>
+
+<p>The 65C02 is a updated version of the 6502. It includes some bug fixes and new instructions. The goal is for i6502 to fully support the 65C02 as well.</p>
+
+<h2>
+<a name="whats-included-in-the-emulator" class="anchor" href="#whats-included-in-the-emulator"><span class="octicon octicon-link"></span></a>What's included in the emulator?</h2>
+
+<ul>
+<li>6502 Microprocessor, fully tested</li>
+<li>16-bit address bus, with attachable memory</li>
+<li>RAM Memory</li>
+</ul><h2>
+<a name="whats-not-yet-included" class="anchor" href="#whats-not-yet-included"><span class="octicon octicon-link"></span></a>What's not (yet) included?</h2>
+
+<ul>
+<li>Proper Golang packaging and documentation</li>
+<li>65C02 support</li>
+<li>Roms</li>
+<li>I/O (VIA 6522, ACIA 6551)</li>
+<li>Batteries</li>
+</ul><h2>
+<a name="getting-started" class="anchor" href="#getting-started"><span class="octicon octicon-link"></span></a>Getting started</h2>
+
+<p>Although this package contains everything you need, there is not single 'emulator' program yet. The CPU, address bus and RAM components are all available to you, but documentation is still lacking.</p>
+
+<p>For now, you can checkout the project, and run the tests.</p>
+
+<pre><code>go get github.com/ariejan/i6502
+cd $GOPATH/src/github.com/ariejan/i6502
+go get -t
+go test
+</code></pre>
+
+<h2>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
+
+<p>This project is licensed under the MIT, see <a href="https://github.com/ariejan/i6502/blob/master/LICENSE">LICENSE</a> for full details.</p>
+
+<h2>
+<a name="contributors" class="anchor" href="#contributors"><span class="octicon octicon-link"></span></a>Contributors</h2>
+
+<ul>
+<li>
+<p>Ariejan de Vroom (<a href="mailto:ariejan@ariejan.net">ariejan@ariejan.net</a>)</p>
+
+<p>Special thanks to the awesome folk at <a href="http://forum.6502.org">http://forum.6502.org</a> for their support and shared knowledge.</p>
+</li>
+</ul>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/ariejan">ariejan</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
