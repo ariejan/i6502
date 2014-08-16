@@ -3,8 +3,6 @@ package i6502
 import "fmt"
 
 type Cpu struct {
-	bus *AddressBus // The address bus
-
 	PC uint16 // 16-bit program counter
 	P  byte   // Status Register
 	SP byte   // Stack Pointer
@@ -12,16 +10,20 @@ type Cpu struct {
 	A byte // Accumulator
 	X byte // X index register
 	Y byte // Y index register
+
+	Bus *AddressBus // The address bus
 }
 
 const (
 	ResetVector = 0xFFFC // 0xFFFC-FFFD
 	IrqVector   = 0xFFFE // 0xFFFE-FFFF
+
+	StackBase = 0x0100 // One page 0x0100-01FF
 )
 
 // Create an new Cpu instance with the specified AddressBus
 func NewCpu(bus *AddressBus) (*Cpu, error) {
-	return &Cpu{bus: bus}, nil
+	return &Cpu{Bus: bus}, nil
 }
 
 func (c *Cpu) String() string {
@@ -29,13 +31,13 @@ func (c *Cpu) String() string {
 	return fmt.Sprintf(str, c.A, c.X, c.Y, c.SP, c.PC, c.P)
 }
 
-func (c *Cpu) HasAddressBus() bool {
-	return c.bus != nil
+func (c *Cpu) hasAddressBus() bool {
+	return c.Bus != nil
 }
 
 // Reset the CPU, emulating the RESB pin.
 func (c *Cpu) Reset() {
-	c.PC = c.bus.Read16(ResetVector)
+	c.PC = c.Bus.Read16(ResetVector)
 	c.P = 0x34
 
 	// Not specified, but let's clean up
@@ -57,14 +59,14 @@ func (c *Cpu) handleIrq(PC uint16) {
 
 	c.setIrqDisable(true)
 
-	c.PC = c.bus.Read16(IrqVector)
+	c.PC = c.Bus.Read16(IrqVector)
 }
 
 // Load the specified program data at the given memory location
 // and point the Program Counter to the beginning of the program
 func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	for i, b := range data {
-		c.bus.Write(location+uint16(i), b)
+		c.Bus.Write(location+uint16(i), b)
 	}
 
 	c.PC = location
@@ -72,10 +74,8 @@ func (c *Cpu) LoadProgram(data []byte, location uint16) {
 
 // Execute the instruction pointed to by the Program Counter (PC)
 func (c *Cpu) Step() {
-	// fmt.Println(c)
 	instruction := c.readNextInstruction()
 	c.PC += uint16(instruction.Size)
-	// fmt.Println(instruction)
 	c.execute(instruction)
 }
 
@@ -84,9 +84,9 @@ func (c *Cpu) execute(instruction Instruction) {
 	case nop:
 		break
 	case adc:
-		c.ADC(instruction)
+		c.adc(instruction)
 	case sbc:
-		c.SBC(instruction)
+		c.sbc(instruction)
 	case sec:
 		c.setCarry(true)
 	case sed:
@@ -106,31 +106,40 @@ func (c *Cpu) execute(instruction Instruction) {
 	case iny:
 		c.setY(c.Y + 1)
 	case inc:
-		c.INC(instruction)
+		c.inc(instruction)
 	case dex:
 		c.setX(c.X - 1)
 	case dey:
 		c.setY(c.Y - 1)
 	case dec:
-		c.DEC(instruction)
+		c.dec(instruction)
 	case lda:
-		c.LDA(instruction)
+		value := c.resolveOperand(instruction)
+		c.setA(value)
 	case ldx:
-		c.LDX(instruction)
+		value := c.resolveOperand(instruction)
+		c.setX(value)
 	case ldy:
-		c.LDY(instruction)
+		value := c.resolveOperand(instruction)
+		c.setY(value)
 	case ora:
-		c.ORA(instruction)
+		value := c.resolveOperand(instruction)
+		c.setA(c.A | value)
 	case and:
-		c.AND(instruction)
+		value := c.resolveOperand(instruction)
+		c.setA(c.A & value)
 	case eor:
-		c.EOR(instruction)
+		value := c.resolveOperand(instruction)
+		c.setA(c.A ^ value)
 	case sta:
-		c.STA(instruction)
+		address := c.memoryAddress(instruction)
+		c.Bus.Write(address, c.A)
 	case stx:
-		c.STX(instruction)
+		address := c.memoryAddress(instruction)
+		c.Bus.Write(address, c.X)
 	case sty:
-		c.STY(instruction)
+		address := c.memoryAddress(instruction)
+		c.Bus.Write(address, c.Y)
 	case tax:
 		c.setX(c.A)
 	case tay:
@@ -144,21 +153,28 @@ func (c *Cpu) execute(instruction Instruction) {
 	case txs:
 		c.SP = c.X
 	case asl:
-		c.ASL(instruction)
+		c.asl(instruction)
 	case lsr:
-		c.LSR(instruction)
+		c.lsr(instruction)
 	case rol:
-		c.ROL(instruction)
+		c.rol(instruction)
 	case ror:
-		c.ROR(instruction)
+		c.ror(instruction)
 	case cmp:
-		c.CMP(instruction)
+		value := c.resolveOperand(instruction)
+		c.setCarry(c.A >= value)
+		c.setArithmeticFlags(c.A - value)
 	case cpx:
-		c.CPX(instruction)
+		value := c.resolveOperand(instruction)
+		c.setCarry(c.X >= value)
+		c.setArithmeticFlags(c.X - value)
 	case cpy:
-		c.CPY(instruction)
+		value := c.resolveOperand(instruction)
+		c.setCarry(c.Y >= value)
+		c.setArithmeticFlags(c.Y - value)
 	case brk:
-		c.BRK()
+		c.setBreak(true)
+		c.handleIrq(c.PC + 1)
 	case bcc:
 		if !c.getCarry() {
 			c.branch(instruction)
@@ -192,7 +208,10 @@ func (c *Cpu) execute(instruction Instruction) {
 			c.branch(instruction)
 		}
 	case bit:
-		c.BIT(instruction)
+		value := c.resolveOperand(instruction)
+		c.setNegative((value & 0x80) != 0)
+		c.setOverflow((value & 0x40) != 0)
+		c.setZero((c.A & value) == 0)
 	case php:
 		c.stackPush(c.P | 0x30)
 	case plp:
@@ -203,9 +222,11 @@ func (c *Cpu) execute(instruction Instruction) {
 		value := c.stackPop()
 		c.setA(value)
 	case jmp:
-		c.JMP(instruction)
+		c.PC = c.memoryAddress(instruction)
 	case jsr:
-		c.JSR(instruction)
+		c.stackPush(byte((c.PC - 1) >> 8))
+		c.stackPush(byte(c.PC - 1))
+		c.PC = c.memoryAddress(instruction)
 	case rts:
 		c.PC = (uint16(c.stackPop()) | uint16(c.stackPop())<<8) + 1
 	case rti:
@@ -214,6 +235,27 @@ func (c *Cpu) execute(instruction Instruction) {
 	default:
 		panic(fmt.Errorf("Unimplemented instruction: %s", instruction))
 	}
+}
+
+func (c *Cpu) readNextInstruction() Instruction {
+	// Read the opcode
+	opcode := c.Bus.Read(c.PC)
+
+	optype, ok := opTypes[opcode]
+	if !ok {
+		panic(fmt.Sprintf("Unknown or unimplemented opcode 0x%02X\n%s", opcode, c.String()))
+	}
+
+	instruction := Instruction{OpType: optype, Address: c.PC}
+	switch instruction.Size {
+	case 1: // Zero operand instruction
+	case 2: // 8-bit operand
+		instruction.Op8 = c.Bus.Read(c.PC + 1)
+	case 3: // 16-bit operand
+		instruction.Op16 = c.Bus.Read16(c.PC + 1)
+	}
+
+	return instruction
 }
 
 func (c *Cpu) branch(in Instruction) {
@@ -230,7 +272,7 @@ func (c *Cpu) resolveOperand(in Instruction) uint8 {
 	case immediate:
 		return in.Op8
 	default:
-		return c.bus.Read(c.memoryAddress(in))
+		return c.Bus.Read(c.memoryAddress(in))
 	}
 }
 
@@ -243,11 +285,11 @@ func (c *Cpu) memoryAddress(in Instruction) uint16 {
 	case absoluteY:
 		return in.Op16 + uint16(c.Y)
 	case indirect:
-		return c.bus.Read16(in.Op16)
+		return c.Bus.Read16(in.Op16)
 	case indirectX:
-		return c.bus.Read16(uint16(in.Op8 + c.X))
+		return c.Bus.Read16(uint16(in.Op8 + c.X))
 	case indirectY:
-		return c.bus.Read16(uint16(in.Op8)) + uint16(c.Y)
+		return c.Bus.Read16(uint16(in.Op8)) + uint16(c.Y)
 	case relative:
 		panic("Relative addressing not yet implemented.")
 	case zeropage:
@@ -259,4 +301,202 @@ func (c *Cpu) memoryAddress(in Instruction) uint16 {
 	default:
 		panic(fmt.Errorf("Unhandled addressing mode. Are you sure you are running a 6502 ROM?"))
 	}
+}
+
+// Add Memory to Accumulator with Carry
+func (c *Cpu) adc(in Instruction) {
+	operand := c.resolveOperand(in)
+	carryIn := c.getCarryInt()
+
+	if c.getDecimal() {
+		c.adcDecimal(c.A, operand, carryIn)
+	} else {
+		c.adcNormal(c.A, operand, carryIn)
+	}
+}
+
+// Substract memory from Accummulator with carry
+func (c *Cpu) sbc(in Instruction) {
+	operand := c.resolveOperand(in)
+	carryIn := c.getCarryInt()
+
+	// fmt.Printf("SBC: A: 0x%02X V: 0x%02X C: %b D: %v\n", c.A, operand, carryIn, c.getDecimal())
+
+	if c.getDecimal() {
+		c.sbcDecimal(c.A, operand, carryIn)
+	} else {
+		c.adcNormal(c.A, ^operand, carryIn)
+	}
+}
+
+func (c *Cpu) inc(in Instruction) {
+	address := c.memoryAddress(in)
+	value := c.Bus.Read(address) + 1
+
+	c.Bus.Write(address, value)
+	c.setArithmeticFlags(value)
+}
+
+func (c *Cpu) dec(in Instruction) {
+	address := c.memoryAddress(in)
+	value := c.Bus.Read(address) - 1
+
+	c.Bus.Write(address, value)
+	c.setArithmeticFlags(value)
+}
+
+func (c *Cpu) asl(in Instruction) {
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry((c.A >> 7) == 1)
+		c.A <<= 1
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.Bus.Read(address)
+		c.setCarry((value >> 7) == 1)
+		value <<= 1
+		c.Bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+func (c *Cpu) lsr(in Instruction) {
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry((c.A & 0x01) == 1)
+		c.A >>= 1
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.Bus.Read(address)
+		c.setCarry((value & 0x01) == 1)
+		value >>= 1
+		c.Bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+func (c *Cpu) rol(in Instruction) {
+	carry := c.getCarryInt()
+
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry((c.A & 0x80) != 0)
+		c.A = c.A<<1 | carry
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.Bus.Read(address)
+		c.setCarry((value & 0x80) != 0)
+		value = value<<1 | carry
+		c.Bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+func (c *Cpu) ror(in Instruction) {
+	carry := c.getCarryInt()
+
+	switch in.addressingId {
+	case accumulator:
+		c.setCarry(c.A&0x01 == 1)
+		c.A = c.A>>1 | carry<<7
+		c.setArithmeticFlags(c.A)
+	default:
+		address := c.memoryAddress(in)
+		value := c.Bus.Read(address)
+		c.setCarry(value&0x01 == 1)
+		value = value>>1 | carry<<7
+		c.Bus.Write(address, value)
+		c.setArithmeticFlags(value)
+	}
+}
+
+// Performs regular, 8-bit addition
+func (c *Cpu) adcNormal(a uint8, b uint8, carryIn uint8) {
+	result16 := uint16(a) + uint16(b) + uint16(carryIn)
+	result := uint8(result16)
+	carryOut := (result16 & 0x100) != 0
+	overflow := (a^result)&(b^result)&0x80 != 0
+
+	// Set the carry flag if we exceed 8-bits
+	c.setCarry(carryOut)
+	// Set the overflow bit
+	c.setOverflow(overflow)
+	// Store the resulting value (8-bits)
+	c.setA(result)
+}
+
+// Performs addition in decimal mode
+func (c *Cpu) adcDecimal(a uint8, b uint8, carryIn uint8) {
+	var carryB uint8 = 0
+
+	low := (a & 0x0F) + (b & 0x0F) + carryIn
+	if (low & 0xFF) > 9 {
+		low += 6
+	}
+	if low > 15 {
+		carryB = 1
+	}
+
+	high := (a >> 4) + (b >> 4) + carryB
+	if (high & 0xFF) > 9 {
+		high += 6
+	}
+
+	result := (low & 0x0F) | (high<<4)&0xF0
+
+	c.setCarry(high > 15)
+	c.setZero(result == 0)
+	c.setNegative(false) // BCD never sets negative
+	c.setOverflow(false) // BCD never sets overflow
+
+	c.A = result
+}
+
+func (c *Cpu) sbcDecimal(a uint8, b uint8, carryIn uint8) {
+	var carryB uint8 = 0
+
+	if carryIn == 0 {
+		carryIn = 1
+	} else {
+		carryIn = 0
+	}
+
+	low := (a & 0x0F) - (b & 0x0F) - carryIn
+	if (low & 0x10) != 0 {
+		low -= 6
+	}
+	if (low & 0x10) != 0 {
+		carryB = 1
+	}
+
+	high := (a >> 4) - (b >> 4) - carryB
+	if (high & 0x10) != 0 {
+		high -= 6
+	}
+
+	result := (low & 0x0F) | (high << 4)
+
+	c.setCarry((high & 0xFF) < 15)
+	c.setZero(result == 0)
+	c.setNegative(false) // BCD never sets negative
+	c.setOverflow(false) // BCD never sets overflow
+
+	c.A = result
+}
+
+func (c *Cpu) stackPush(data byte) {
+	c.Bus.Write(StackBase+uint16(c.SP), data)
+	c.SP -= 1
+}
+
+func (c *Cpu) stackPeek() byte {
+	return c.Bus.Read(StackBase + uint16(c.SP+1))
+}
+
+func (c *Cpu) stackPop() byte {
+	c.SP += 1
+	return c.Bus.Read(StackBase + uint16(c.SP))
 }
