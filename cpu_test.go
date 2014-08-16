@@ -28,30 +28,6 @@ func loadProgram(path string) []byte {
 	return data
 }
 
-func TestKlausDormann6502(t *testing.T) {
-	fmt.Println("Running Klaus Dormann' 6502 functional tests. This may take some time...")
-	cpu, _, _ := NewRamMachine()
-	cpu.LoadProgram(loadProgram("test/6502_functional_test.bin"), 0x0000)
-	cpu.PC = 0x0400
-	prevPC := uint16(0x0400)
-
-	for {
-		cpu.Step()
-
-		if cpu.PC == prevPC {
-			if cpu.PC != 0x3399 {
-				str := "Looping PC detected at PC 0x%04X. We've hit a failing Klaus Dormann test."
-				panic(fmt.Sprintf(str, cpu.PC))
-			} else {
-				fmt.Println("Klaus Dormann's 6502 functional tests passed.")
-				break
-			}
-		}
-
-		prevPC = cpu.PC
-	}
-}
-
 func TestNewCpu(t *testing.T) {
 	cpu, err := NewCpu(nil)
 
@@ -3228,4 +3204,30 @@ func TestRTI(t *testing.T) {
 
 	assert.Equal(t, 0x1234, cpu.PC)
 	assert.Equal(t, 0x5B|0x20, cpu.P)
+}
+
+// Run this last, as the full suite takes ±10 seconds to run at
+// maximum speed
+func TestKlausDormann6502(t *testing.T) {
+	fmt.Println("Running Klaus Dormann' 6502 functional tests. This may take some time...")
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram(loadProgram("test/6502_functional_test.bin"), 0x0000)
+	cpu.PC = 0x0400
+	prevPC := uint16(0x0400)
+
+	for {
+		cpu.Step()
+
+		if cpu.PC == prevPC {
+			if cpu.PC != 0x3399 {
+				str := "Looping PC detected at PC 0x%04X. We've hit a failing Klaus Dormann test."
+				panic(fmt.Sprintf(str, cpu.PC))
+			} else {
+				fmt.Println("Klaus Dormann's 6502 functional tests passed.")
+				break
+			}
+		}
+
+		prevPC = cpu.PC
+	}
 }
