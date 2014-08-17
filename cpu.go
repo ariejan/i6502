@@ -2,40 +2,58 @@ package i6502
 
 import "fmt"
 
+/*
+The Cpu only contains the AddressBus, through which 8-bit values can be read and written
+at 16-bit addresses.
+
+The Cpu has an 8-bit accumulator (A) and two 8-bit index registers (X,Y). There is a 16-bit
+Program Counter (PC) and an 8-bit Stack Pointer (SP), pointing to addresses in 0x0100-01FF.
+
+The status register (P) contains flags for Zero, Negative, Break, Decimal, IrqDisable,
+Carry and Overflow flags.
+*/
 type Cpu struct {
+	A byte // Accumulator
+	X byte // Index register X
+	Y byte // Index register Y
+
 	PC uint16 // 16-bit program counter
 	P  byte   // Status Register
 	SP byte   // Stack Pointer
-
-	A byte // Accumulator
-	X byte // X index register
-	Y byte // Y index register
 
 	Bus *AddressBus // The address bus
 }
 
 const (
+	ZeropageBase = 0x0000 // 0x0000-00FF Reserved for zeropage instructions
+	StackBase    = 0x0100 // 0x0100-01FF Reserved for stack
+
 	ResetVector = 0xFFFC // 0xFFFC-FFFD
 	IrqVector   = 0xFFFE // 0xFFFE-FFFF
 
-	StackBase = 0x0100 // One page 0x0100-01FF
 )
 
-// Create an new Cpu instance with the specified AddressBus
+// Create an new Cpu, using the AddressBus for accessing memory.
 func NewCpu(bus *AddressBus) (*Cpu, error) {
 	return &Cpu{Bus: bus}, nil
 }
 
+// Returns a string containing the current state of the CPU.
 func (c *Cpu) String() string {
 	str := ">>> CPU [  A ] [  X ] [  Y ] [ SP ] [  PC  ] NVxBDIZC\n>>>      0x%02X   0x%02X   0x%02X   0x%02X   0x%04X  %08b\n"
 	return fmt.Sprintf(str, c.A, c.X, c.Y, c.SP, c.PC, c.P)
 }
 
-func (c *Cpu) hasAddressBus() bool {
-	return c.Bus != nil
-}
+/*
+Reset the CPU, emulating the RESB pin.
 
-// Reset the CPU, emulating the RESB pin.
+The status register is reset to a know state (0x34, IrqDisabled set, Decimal unset, Break set).
+
+Then the Program Counter is set to the value read from `ResetVector` (0xFFFC-FFFD).
+
+Normally, no assumptions can be made about registers (A, X, Y) and the
+Stack Pointer. For convenience, these are reset to 0x00 (A,X,Y) and 0xFF (SP).
+*/
 func (c *Cpu) Reset() {
 	c.PC = c.Bus.Read16(ResetVector)
 	c.P = 0x34
@@ -47,11 +65,17 @@ func (c *Cpu) Reset() {
 	c.SP = 0xFF
 }
 
-// Simulate the IRQ pin
+/*
+Simulate the IRQ pin.
+
+This will push the current Cpu state to the stack (P + PC) and set the PC
+to the address read from the `IrqVector` (0xFFFE-FFFF)
+*/
 func (c *Cpu) Interrupt() {
 	c.handleIrq(c.PC)
 }
 
+// Handles an interrupt or BRK.
 func (c *Cpu) handleIrq(PC uint16) {
 	c.stackPush(byte(PC >> 8))
 	c.stackPush(byte(PC))
@@ -63,7 +87,7 @@ func (c *Cpu) handleIrq(PC uint16) {
 }
 
 // Load the specified program data at the given memory location
-// and point the Program Counter to the beginning of the program
+// and point the Program Counter to the beginning of the program.
 func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	for i, b := range data {
 		c.Bus.Write(location+uint16(i), b)
@@ -72,13 +96,14 @@ func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	c.PC = location
 }
 
-// Execute the instruction pointed to by the Program Counter (PC)
+// Read and execute the instruction pointed to by the Program Counter (PC)
 func (c *Cpu) Step() {
 	instruction := c.readNextInstruction()
 	c.PC += uint16(instruction.Size)
 	c.execute(instruction)
 }
 
+// Handle the execution of an instruction
 func (c *Cpu) execute(instruction Instruction) {
 	switch instruction.opcodeId {
 	case nop:

@@ -5,19 +5,15 @@ import (
 )
 
 type Instruction struct {
-	// Embed OpType
-	OpType
+	OpType // Embed OpType
 
-	// 8-bit operand for 2-byte instructions
-	Op8 byte
+	Op8  byte   // 8-bit operand for 2-byte instructions
+	Op16 uint16 // 16-bit operand for 3-byte instructions
 
-	// 16-bit operand for 3-byte instructions
-	Op16 uint16
-
-	// Address location where this instruction got read
-	Address uint16
+	Address uint16 // Address location where this instruction got read, for debugging purposes
 }
 
+// Return a string containing debug information about the instruction and operands.
 func (i Instruction) String() (output string) {
 	switch i.Size {
 	case 1:

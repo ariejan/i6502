@@ -13,7 +13,7 @@ func TestEmptyAddressBus(t *testing.T) {
 	assert.Nil(err)
 
 	if assert.NotNil(bus) {
-		assert.Equal(0, bus.AddressablesCount())
+		assert.Equal(0, len(bus.addressables))
 	}
 }
 
@@ -24,7 +24,7 @@ func TestAttachToAddressBus(t *testing.T) {
 	ram, _ := NewRam(0x10000)
 
 	bus.Attach(ram, 0x0000)
-	assert.Equal(1, bus.AddressablesCount())
+	assert.Equal(1, len(bus.addressables))
 }
 
 func TestBusReadWrite(t *testing.T) {
