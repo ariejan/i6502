@@ -15,10 +15,12 @@ type Cpu struct {
 }
 
 const (
+	ZeropageBase = 0x0000 // 0x0000-00FF Reserved for zeropage instructions
+	StackBase    = 0x0100 // 0x0100-01FF Reserved for stack
+
 	ResetVector = 0xFFFC // 0xFFFC-FFFD
 	IrqVector   = 0xFFFE // 0xFFFE-FFFF
 
-	StackBase = 0x0100 // One page 0x0100-01FF
 )
 
 // Create an new Cpu instance with the specified AddressBus
