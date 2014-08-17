@@ -4,7 +4,9 @@
 
 This is an emulator of the i6502 hardward project I'm doing.
 
-It's written in Golang and comes fully tested. 
+It's written in Golang and comes fully tested.
+
+[Website](http://ariejan.github.io/i6502/) • [Documentation](http://godoc.org/github.com/ariejan/i6502)
 
 ## Background
 
