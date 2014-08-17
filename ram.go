@@ -1,9 +1,13 @@
 package i6502
 
+/*
+Random Access Memory, read/write, can be of any size.
+*/
 type Ram struct {
 	data []byte
 }
 
+// Create a new Ram component of the given size.
 func NewRam(size int) (*Ram, error) {
 	return &Ram{data: make([]byte, size)}, nil
 }

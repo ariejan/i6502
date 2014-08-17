@@ -76,6 +76,9 @@ func TestCpuReset(t *testing.T) {
 	// **1101** is specified, but we are satisfied with
 	// 00110100 here.
 	assert.Equal(0x34, cpu.P)
+	assert.True(cpu.getIrqDisable())
+	assert.False(cpu.getDecimal())
+	assert.True(cpu.getBreak())
 
 	// Read PC from $FFFC-FFFD
 	assert.Equal(0x1234, cpu.PC)
