@@ -14,8 +14,9 @@ type Acia6551 struct {
 	Rx chan byte // Reading (Acia Input) line
 	Tx chan byte // Transmitting (Acia Output) line
 
-	rxData      byte
-	txData      byte
+	rxData byte
+	txData byte
+
 	commandData byte
 	controlData byte
 
@@ -24,6 +25,8 @@ type Acia6551 struct {
 
 	rxIrqEnabled bool
 	txIrqEnabled bool
+
+	overrun bool
 }
 
 func NewAcia6551(rx chan byte, tx chan byte) (*Acia6551, error) {
@@ -46,6 +49,7 @@ func (a *Acia6551) Size() uint16 {
 	return 0x04
 }
 
+// Emulates a hardware reset
 func (a *Acia6551) Reset() {
 	a.rxData = 0
 	a.rxFull = false
@@ -55,14 +59,43 @@ func (a *Acia6551) Reset() {
 
 	a.rxIrqEnabled = false
 	a.txIrqEnabled = false
+
+	a.overrun = false
+
+	a.setControl(0)
+	a.setCommand(0)
 }
 
-/*
-func (r *Rom) Read(address uint16) byte {
-	return r.data[address]
+func (a *Acia6551) setControl(data byte) {
 }
 
-func (r *Rom) Write(address uint16, data byte) {
-	panic(fmt.Errorf("Trying to write to ROM at 0x%04X", address))
+func (a *Acia6551) setCommand(data byte) {
 }
-*/
+
+func (a *Acia6551) Read(address uint16) byte {
+	switch address {
+	case aciaData:
+		// Read Rx
+	case aciaStatus:
+		// Read Status reg.
+	case aciaCommand:
+		// Read command
+	case aciaControl:
+		// Read control
+	}
+
+	return 0x00
+}
+
+func (a *Acia6551) Write(address uint16, data byte) {
+	switch address {
+	case aciaData:
+		// Write Tx
+	case aciaStatus:
+		// Reset
+	case aciaCommand:
+		// Write command
+	case aciaControl:
+		// Write control
+	}
+}

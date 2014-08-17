@@ -34,6 +34,9 @@ func TestAciaReset(t *testing.T) {
 
 	assert.False(t, a.txIrqEnabled)
 	assert.False(t, a.rxIrqEnabled)
+
+	assert.False(t, a.overrun)
+	assert.Equal(t, 0, a.controlData)
 }
 
 func TestAciaCommand(t *testing.T) {
