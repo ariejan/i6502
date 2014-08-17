@@ -160,12 +160,13 @@ var instructionNames = [...]string{
 // addressing mode. It also includes some extra information for the
 // emulator, like number of cycles
 type OpType struct {
-	Opcode byte  // 65(C)02 Opcode, this includes an instruction and addressing mode
-	Size   uint8 // Size of the entire instruction in bytes
-	Cycles uint8 // Number of clock cycles required to complete this instruction
+	Opcode byte // 65(C)02 Opcode, this includes an instruction and addressing mode
 
 	opcodeId     uint8 // Decoded opcode Id,
 	addressingId uint8 // Decoded address mode Id
+
+	Size   uint8 // Size of the entire instruction in bytes
+	Cycles uint8 // Number of clock cycles required to complete this instruction
 }
 
 var opTypes = map[uint8]OpType{
