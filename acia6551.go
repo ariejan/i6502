@@ -1,5 +1,7 @@
 package i6502
 
+import "fmt"
+
 const (
 	aciaData = iota
 	aciaStatus
@@ -9,6 +11,14 @@ const (
 
 /*
 ACIA 6551 Serial IO
+
+This Asynchronous Communications Interface Adapater can be
+directly attached to the 6502's address and data busses.
+
+It provides serial IO.
+
+The supplied Rx and Tx channels can be used to read and wirte
+data to the ACIA 6551.
 */
 type Acia6551 struct {
 	Rx chan byte // Reading (Acia Input) line
@@ -34,7 +44,14 @@ func NewAcia6551(rx chan byte, tx chan byte) (*Acia6551, error) {
 	acia.Reset()
 
 	go func() {
-		// Handle rx data channel
+		for {
+			select {
+			case data := <-acia.Rx:
+				acia.rxData = data
+				acia.rxFull = true
+				fmt.Printf("Rx: 0x%02X\n", data)
+			}
+		}
 	}()
 
 	go func() {
@@ -72,6 +89,7 @@ func (a *Acia6551) setControl(data byte) {
 func (a *Acia6551) setCommand(data byte) {
 }
 
+// Used by the AddressBus to read data from the ACIA 6551
 func (a *Acia6551) Read(address uint16) byte {
 	switch address {
 	case aciaData:

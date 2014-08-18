@@ -1,16 +1,17 @@
 package i6502
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func AciaSubject() *Acia6551 {
+func AciaSubject() (*Acia6551, chan byte, chan byte) {
 	tx := make(chan byte)
 	rx := make(chan byte)
 	acia, _ := NewAcia6551(rx, tx)
 
-	return acia
+	return acia, rx, tx
 }
 
 func TestNewAcia6551(t *testing.T) {
@@ -23,7 +24,8 @@ func TestNewAcia6551(t *testing.T) {
 }
 
 func TestAciaReset(t *testing.T) {
-	a := AciaSubject()
+	a, _, _ := AciaSubject()
+
 	a.Reset()
 
 	assert.Equal(t, a.txData, 0)
@@ -39,5 +41,15 @@ func TestAciaReset(t *testing.T) {
 	assert.Equal(t, 0, a.controlData)
 }
 
-func TestAciaCommand(t *testing.T) {
+func TestAciaReadData(t *testing.T) {
+	a, _, _ := AciaSubject()
+
+	a.Rx <- 0x42
+
+	assert.True(t, a.rxFull)
+
+	fmt.Printf("Reading...\n")
+	value := a.Read(aciaData)
+	assert.Equal(t, 0x42, value)
+	assert.False(t, a.rxFull)
 }
