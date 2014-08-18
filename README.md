@@ -11,7 +11,7 @@ It's written in Golang and comes fully tested.
 ## Background
 
 The MOS 6502 Microprocessor has been around sinc 1975 and is used in many popular systems, like
-the Apple II, Amiga 2600, Commodore 64 and the Nintendo Entertainment System (NES).
+the Apple II, Atari 2600, Commodore 64 and the Nintendo Entertainment System (NES).
 
 It features an 8-bit accumulator and ALU, two 8-bit index registers and a 16-bit memory bus, allowing the processor to access up to 64kB of memory. 
 
