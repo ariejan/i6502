@@ -1,7 +1,5 @@
 package i6502
 
-import "fmt"
-
 const (
 	aciaData = iota
 	aciaStatus
@@ -21,11 +19,8 @@ The supplied Rx and Tx channels can be used to read and wirte
 data to the ACIA 6551.
 */
 type Acia6551 struct {
-	Rx chan byte // Reading (Acia Input) line
-	Tx chan byte // Transmitting (Acia Output) line
-
-	rxData byte
-	txData byte
+	rx byte
+	tx byte
 
 	commandData byte
 	controlData byte
@@ -39,24 +34,9 @@ type Acia6551 struct {
 	overrun bool
 }
 
-func NewAcia6551(rx chan byte, tx chan byte) (*Acia6551, error) {
-	acia := &Acia6551{Tx: tx, Rx: rx}
+func NewAcia6551() (*Acia6551, error) {
+	acia := &Acia6551{}
 	acia.Reset()
-
-	go func() {
-		for {
-			select {
-			case data := <-acia.Rx:
-				acia.rxData = data
-				acia.rxFull = true
-				fmt.Printf("Rx: 0x%02X\n", data)
-			}
-		}
-	}()
-
-	go func() {
-		// Handle tx data channel
-	}()
 
 	return acia, nil
 }
@@ -68,10 +48,10 @@ func (a *Acia6551) Size() uint16 {
 
 // Emulates a hardware reset
 func (a *Acia6551) Reset() {
-	a.rxData = 0
+	a.rx = 0
 	a.rxFull = false
 
-	a.txData = 0
+	a.tx = 0
 	a.txEmpty = true
 
 	a.rxIrqEnabled = false
@@ -84,36 +64,102 @@ func (a *Acia6551) Reset() {
 }
 
 func (a *Acia6551) setControl(data byte) {
+	a.controlData = data
 }
 
 func (a *Acia6551) setCommand(data byte) {
+	a.commandData = data
+
+	a.rxIrqEnabled = (data & 0x02) != 0
+	a.txIrqEnabled = ((data & 0x04) != 0) && ((data & 0x08) != 1)
+}
+
+func (a *Acia6551) statusRegister() byte {
+	status := byte(0)
+
+	if a.rxFull {
+		status |= 0x08
+	}
+
+	if a.txEmpty {
+		status |= 0x10
+	}
+
+	if a.overrun {
+		status |= 0x04
+	}
+
+	return status
+}
+
+// Implements io.Reader, for external programs to read TX'ed data from
+// the serial output.
+func (a *Acia6551) Read(p []byte) (n int, err error) {
+	a.txEmpty = true
+	copy(p, []byte{a.tx})
+	// TODO: Handle txInterrupt
+	return 1, nil
+}
+
+// Implements io.Writer, for external programs to write to the
+// ACIA's RX
+func (a *Acia6551) Write(p []byte) (n int, err error) {
+	for _, b := range p {
+		a.rxWrite(b)
+	}
+
+	return len(p), nil
 }
 
 // Used by the AddressBus to read data from the ACIA 6551
-func (a *Acia6551) Read(address uint16) byte {
+func (a *Acia6551) ReadByte(address uint16) byte {
 	switch address {
 	case aciaData:
-		// Read Rx
+		return a.rxRead()
 	case aciaStatus:
-		// Read Status reg.
+		return a.statusRegister()
 	case aciaCommand:
-		// Read command
+		return a.commandData
 	case aciaControl:
-		// Read control
+		return a.controlData
 	}
 
 	return 0x00
 }
 
-func (a *Acia6551) Write(address uint16, data byte) {
+// Used by the AddressBus to write data to the ACIA 6551
+func (a *Acia6551) WriteByte(address uint16, data byte) {
 	switch address {
 	case aciaData:
-		// Write Tx
+		a.txWrite(data)
 	case aciaStatus:
-		// Reset
+		a.Reset()
 	case aciaCommand:
-		// Write command
+		a.setCommand(data)
 	case aciaControl:
-		// Write control
+		a.setControl(data)
 	}
+}
+
+func (a *Acia6551) rxRead() byte {
+	a.overrun = false
+	a.rxFull = false
+	return a.rx
+}
+
+func (a *Acia6551) rxWrite(data byte) {
+	// Oh no, overrun. Set the appropriate status
+	if a.rxFull {
+		a.overrun = true
+	}
+
+	a.rx = data
+	a.rxFull = true
+
+	// TODO: Interrupts
+}
+
+func (a *Acia6551) txWrite(data byte) {
+	a.tx = data
+	a.txEmpty = false
 }
