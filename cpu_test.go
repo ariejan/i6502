@@ -2,9 +2,10 @@ package i6502
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Creates a new machine, returning the different parts
@@ -45,8 +46,8 @@ func TestStackPushPopPeek(t *testing.T) {
 	cpu.stackPush(0xA0)
 
 	assert.Equal(0xFD, cpu.SP)
-	assert.Equal(0x42, cpu.Bus.Read(0x1FF))
-	assert.Equal(0xA0, cpu.Bus.Read(0x1FE))
+	assert.Equal(0x42, cpu.Bus.ReadByte(0x1FF))
+	assert.Equal(0xA0, cpu.Bus.ReadByte(0x1FE))
 
 	peekValue := cpu.stackPeek()
 	assert.Equal(0xFD, cpu.SP)
@@ -100,9 +101,9 @@ func TestCpuInterrupt(t *testing.T) {
 	cpu.Interrupt()
 
 	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0x03, cpu.Bus.Read(0x01FF))
-	assert.Equal(t, 0x80, cpu.Bus.Read(0x01FE))
-	assert.Equal(t, status, cpu.Bus.Read(0x01FD))
+	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x01FF))
+	assert.Equal(t, 0x80, cpu.Bus.ReadByte(0x01FE))
+	assert.Equal(t, status, cpu.Bus.ReadByte(0x01FD))
 	assert.True(t, cpu.getIrqDisable())
 }
 
@@ -114,9 +115,9 @@ func TestProgramLoading(t *testing.T) {
 	cpu, bus, _ := NewRamMachine()
 	cpu.LoadProgram(program, 0x0300)
 
-	assert.Equal(0xEA, bus.Read(0x0300))
-	assert.Equal(0xEB, bus.Read(0x0301))
-	assert.Equal(0xEC, bus.Read(0x0302))
+	assert.Equal(0xEA, bus.ReadByte(0x0300))
+	assert.Equal(0xEB, bus.ReadByte(0x0301))
+	assert.Equal(0xEC, bus.ReadByte(0x0302))
 
 	assert.Equal(0x0300, cpu.PC)
 }
@@ -295,7 +296,7 @@ func TestADCZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x65, 0x53}, 0x0300)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x53, 0x12)
+	cpu.Bus.WriteByte(0x53, 0x12)
 
 	cpu.Step()
 
@@ -308,7 +309,7 @@ func TestADCZeropageX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x75, 0x53}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x01
-	cpu.Bus.Write(0x54, 0x12)
+	cpu.Bus.WriteByte(0x54, 0x12)
 
 	cpu.Step()
 
@@ -320,7 +321,7 @@ func TestADCAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x6D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x8000, 0x12)
+	cpu.Bus.WriteByte(0x8000, 0x12)
 
 	cpu.Step()
 
@@ -333,7 +334,7 @@ func TestADCAbsoluteX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x7D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x12)
+	cpu.Bus.WriteByte(0x8002, 0x12)
 
 	cpu.Step()
 
@@ -346,7 +347,7 @@ func TestADCAbsoluteY(t *testing.T) {
 	cpu.LoadProgram([]byte{0x79, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x12)
+	cpu.Bus.WriteByte(0x8002, 0x12)
 
 	cpu.Step()
 
@@ -360,7 +361,7 @@ func TestADCIndirectX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x82, 0xC000)
-	cpu.Bus.Write(0xC000, 0x12)
+	cpu.Bus.WriteByte(0xC000, 0x12)
 
 	cpu.Step()
 
@@ -374,7 +375,7 @@ func TestADCIndirectY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x80, 0xC000)
-	cpu.Bus.Write(0xC002, 0x12)
+	cpu.Bus.WriteByte(0xC002, 0x12)
 
 	cpu.Step()
 
@@ -454,7 +455,7 @@ func TestSBCZeropage(t *testing.T) {
 	cpu.LoadProgram([]byte{0xE5, 0x53}, 0x0300)
 	cpu.setCarry(true)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x53, 0x12)
+	cpu.Bus.WriteByte(0x53, 0x12)
 
 	cpu.Step()
 
@@ -468,7 +469,7 @@ func TestZeropageX(t *testing.T) {
 	cpu.setCarry(true)
 	cpu.A = 0x42
 	cpu.X = 0x01
-	cpu.Bus.Write(0x54, 0x12)
+	cpu.Bus.WriteByte(0x54, 0x12)
 
 	cpu.Step()
 
@@ -481,7 +482,7 @@ func TestSBCAbsolute(t *testing.T) {
 	cpu.LoadProgram([]byte{0xED, 0x00, 0x80}, 0x0300)
 	cpu.setCarry(true)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x8000, 0x12)
+	cpu.Bus.WriteByte(0x8000, 0x12)
 
 	cpu.Step()
 
@@ -495,7 +496,7 @@ func TestSBCAbsoluteX(t *testing.T) {
 	cpu.setCarry(true)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x12)
+	cpu.Bus.WriteByte(0x8002, 0x12)
 
 	cpu.Step()
 
@@ -509,7 +510,7 @@ func TestSBCAbsoluteY(t *testing.T) {
 	cpu.setCarry(true)
 	cpu.A = 0x42
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x12)
+	cpu.Bus.WriteByte(0x8002, 0x12)
 
 	cpu.Step()
 
@@ -524,7 +525,7 @@ func TestSBCIndirectX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x82, 0xC000)
-	cpu.Bus.Write(0xC000, 0x12)
+	cpu.Bus.WriteByte(0xC000, 0x12)
 
 	cpu.Step()
 
@@ -539,7 +540,7 @@ func TestSBCIndirectY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x80, 0xC000)
-	cpu.Bus.Write(0xC002, 0x12)
+	cpu.Bus.WriteByte(0xC002, 0x12)
 
 	cpu.Step()
 
@@ -600,47 +601,47 @@ func TestINYRollover(t *testing.T) {
 func TestINCZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xE6, 0x42}, 0x0300)
-	cpu.Bus.Write(0x42, 0x01)
+	cpu.Bus.WriteByte(0x42, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x42))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x42))
 }
 
 func TestINCZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xF6, 0x42}, 0x0300)
 	cpu.X = 0x01
-	cpu.Bus.Write(0x43, 0x01)
+	cpu.Bus.WriteByte(0x43, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x43))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x43))
 }
 
 func TestINCAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xEE, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x01)
+	cpu.Bus.WriteByte(0x8000, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestINCAbsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xFE, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x01)
+	cpu.Bus.WriteByte(0x8002, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// DEX
@@ -696,47 +697,47 @@ func TestDEYRollover(t *testing.T) {
 func TestDECZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xC6, 0x42}, 0x0300)
-	cpu.Bus.Write(0x42, 0x01)
+	cpu.Bus.WriteByte(0x42, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x42))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x42))
 }
 
 func TestDECZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xD6, 0x42}, 0x0300)
 	cpu.X = 0x01
-	cpu.Bus.Write(0x43, 0x01)
+	cpu.Bus.WriteByte(0x43, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x43))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x43))
 }
 
 func TestDECAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xCE, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x01)
+	cpu.Bus.WriteByte(0x8000, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestDECAbsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xDE, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x01)
+	cpu.Bus.WriteByte(0x8002, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x8002))
 }
 
 //// LDA
@@ -776,7 +777,7 @@ func TestLDAZero(t *testing.T) {
 func TestLDAZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xA5, 0x42}, 0x0300)
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -788,7 +789,7 @@ func TestLDAZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xB5, 0x41}, 0x0300)
 	cpu.X = 0x01
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -836,7 +837,7 @@ func TestLDAIndirectX(t *testing.T) {
 	cpu.LoadProgram([]byte{0xA1, 0x80}, 0x0300)
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x82, 0xC000)
-	cpu.Bus.Write(0xC000, 0xF8)
+	cpu.Bus.WriteByte(0xC000, 0xF8)
 
 	cpu.Step()
 
@@ -849,7 +850,7 @@ func TestLDAIndirectY(t *testing.T) {
 	cpu.LoadProgram([]byte{0xB1, 0x80}, 0x0300)
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x80, 0xC000)
-	cpu.Bus.Write(0xC002, 0xF8)
+	cpu.Bus.WriteByte(0xC002, 0xF8)
 
 	cpu.Step()
 
@@ -894,7 +895,7 @@ func TestLDXZero(t *testing.T) {
 func TestLDXZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xA6, 0x42}, 0x0300)
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -906,7 +907,7 @@ func TestLDXZeropageY(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xB6, 0x41}, 0x0300)
 	cpu.Y = 0x01
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -974,7 +975,7 @@ func TestLDYZero(t *testing.T) {
 func TestLDYZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xA4, 0x42}, 0x0300)
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -986,7 +987,7 @@ func TestLDYZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xB4, 0x41}, 0x0300)
 	cpu.X = 0x01
-	cpu.Bus.Write(0x42, 0xF8)
+	cpu.Bus.WriteByte(0x42, 0xF8)
 
 	cpu.Step()
 
@@ -1058,7 +1059,7 @@ func TestORAZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x05, 0x42}, 0x0300)
 	cpu.A = 0xF0
-	cpu.Bus.Write(0x0042, 0x02)
+	cpu.Bus.WriteByte(0x0042, 0x02)
 
 	cpu.Step()
 
@@ -1071,7 +1072,7 @@ func TestORAZeropageX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x15, 0x40}, 0x0300)
 	cpu.A = 0xF0
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0042, 0x02)
+	cpu.Bus.WriteByte(0x0042, 0x02)
 
 	cpu.Step()
 
@@ -1083,7 +1084,7 @@ func TestORAAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x0D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0xF0
-	cpu.Bus.Write(0x8000, 0x02)
+	cpu.Bus.WriteByte(0x8000, 0x02)
 
 	cpu.Step()
 
@@ -1096,7 +1097,7 @@ func TestORAAbsoluteX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x1D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0xF0
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x02)
+	cpu.Bus.WriteByte(0x8002, 0x02)
 
 	cpu.Step()
 
@@ -1109,7 +1110,7 @@ func TestORAAbsoluteY(t *testing.T) {
 	cpu.LoadProgram([]byte{0x19, 0x00, 0x80}, 0x0300)
 	cpu.A = 0xF0
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x02)
+	cpu.Bus.WriteByte(0x8002, 0x02)
 
 	cpu.Step()
 
@@ -1123,7 +1124,7 @@ func TestORAIndirectX(t *testing.T) {
 	cpu.A = 0xF0
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x42, 0xC000)
-	cpu.Bus.Write(0xC000, 0x02)
+	cpu.Bus.WriteByte(0xC000, 0x02)
 
 	cpu.Step()
 
@@ -1137,7 +1138,7 @@ func TestORAIndirectY(t *testing.T) {
 	cpu.A = 0xF0
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x40, 0xC000)
-	cpu.Bus.Write(0xC002, 0x02)
+	cpu.Bus.WriteByte(0xC002, 0x02)
 
 	cpu.Step()
 
@@ -1186,7 +1187,7 @@ func TestANDZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x25, 0x42}, 0x0300)
 	cpu.A = 0xE9
-	cpu.Bus.Write(0x0042, 0x0f)
+	cpu.Bus.WriteByte(0x0042, 0x0f)
 
 	cpu.Step()
 
@@ -1199,7 +1200,7 @@ func TestANDZeropageX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x35, 0x40}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0042, 0x0F)
+	cpu.Bus.WriteByte(0x0042, 0x0F)
 
 	cpu.Step()
 
@@ -1211,7 +1212,7 @@ func TestANDAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x2D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x8000, 0x0F)
+	cpu.Bus.WriteByte(0x8000, 0x0F)
 
 	cpu.Step()
 
@@ -1224,7 +1225,7 @@ func TestANDAbsoluteX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x3D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x0F)
+	cpu.Bus.WriteByte(0x8002, 0x0F)
 
 	cpu.Step()
 
@@ -1237,7 +1238,7 @@ func TestANDAbsoluteY(t *testing.T) {
 	cpu.LoadProgram([]byte{0x39, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x0F)
+	cpu.Bus.WriteByte(0x8002, 0x0F)
 
 	cpu.Step()
 
@@ -1251,7 +1252,7 @@ func TestANDIndirectX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x82, 0xC000)
-	cpu.Bus.Write(0xC000, 0x0F)
+	cpu.Bus.WriteByte(0xC000, 0x0F)
 
 	cpu.Step()
 
@@ -1265,7 +1266,7 @@ func TestANDIndirectY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x80, 0xC000)
-	cpu.Bus.Write(0xC002, 0x0F)
+	cpu.Bus.WriteByte(0xC002, 0x0F)
 
 	cpu.Step()
 
@@ -1314,7 +1315,7 @@ func TestEORZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x45, 0x80}, 0x0300)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x0080, 0x7f)
+	cpu.Bus.WriteByte(0x0080, 0x7f)
 
 	cpu.Step()
 
@@ -1327,7 +1328,7 @@ func TestEORZeropageX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x55, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0082, 0x7F)
+	cpu.Bus.WriteByte(0x0082, 0x7F)
 
 	cpu.Step()
 
@@ -1339,7 +1340,7 @@ func TestEORAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x4D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
-	cpu.Bus.Write(0x8000, 0x7F)
+	cpu.Bus.WriteByte(0x8000, 0x7F)
 
 	cpu.Step()
 
@@ -1352,7 +1353,7 @@ func TestEORAbsoluteX(t *testing.T) {
 	cpu.LoadProgram([]byte{0x5D, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x7F)
+	cpu.Bus.WriteByte(0x8002, 0x7F)
 
 	cpu.Step()
 
@@ -1365,7 +1366,7 @@ func TestEORAbsoluteY(t *testing.T) {
 	cpu.LoadProgram([]byte{0x59, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x7F)
+	cpu.Bus.WriteByte(0x8002, 0x7F)
 
 	cpu.Step()
 
@@ -1379,7 +1380,7 @@ func TestEORIndirectX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.X = 0x02
 	cpu.Bus.Write16(0x82, 0xC000)
-	cpu.Bus.Write(0xC000, 0x7F)
+	cpu.Bus.WriteByte(0xC000, 0x7F)
 
 	cpu.Step()
 
@@ -1393,7 +1394,7 @@ func TestEORIndirectY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Y = 0x02
 	cpu.Bus.Write16(0x80, 0xC000)
-	cpu.Bus.Write(0xC002, 0x7F)
+	cpu.Bus.WriteByte(0xC002, 0x7F)
 
 	cpu.Step()
 
@@ -1411,7 +1412,7 @@ func TestSTAZeropage(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTAZeropageX(t *testing.T) {
@@ -1423,7 +1424,7 @@ func TestSTAZeropageX(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTAAbsolute(t *testing.T) {
@@ -1434,7 +1435,7 @@ func TestSTAAbsolute(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestSTAAbsoluteX(t *testing.T) {
@@ -1446,7 +1447,7 @@ func TestSTAAbsoluteX(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8002))
 }
 
 func TestSTAAbsoluteY(t *testing.T) {
@@ -1454,12 +1455,12 @@ func TestSTAAbsoluteY(t *testing.T) {
 	cpu.LoadProgram([]byte{0x99, 0x00, 0x80}, 0x0300)
 	cpu.A = 0x42
 	cpu.Y = 0x02
-	cpu.Bus.Write(0x8002, 0x7F)
+	cpu.Bus.WriteByte(0x8002, 0x7F)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8002))
 }
 
 func TestSTAIndirectX(t *testing.T) {
@@ -1472,7 +1473,7 @@ func TestSTAIndirectX(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0xC000))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0xC000))
 }
 
 func TestSTAIndirectY(t *testing.T) {
@@ -1485,7 +1486,7 @@ func TestSTAIndirectY(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0xC002))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0xC002))
 }
 
 //// STX
@@ -1498,7 +1499,7 @@ func TestSTXZeropage(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTXZeropageY(t *testing.T) {
@@ -1510,7 +1511,7 @@ func TestSTXZeropageY(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTXAbsolute(t *testing.T) {
@@ -1521,7 +1522,7 @@ func TestSTXAbsolute(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 //// STY
@@ -1534,7 +1535,7 @@ func TestSTYZeropage(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTYZeropageX(t *testing.T) {
@@ -1546,7 +1547,7 @@ func TestSTYZeropageX(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTYAbsolute(t *testing.T) {
@@ -1557,7 +1558,7 @@ func TestSTYAbsolute(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 //// TAX
@@ -1810,47 +1811,47 @@ func TestASLAccumulatorCarry(t *testing.T) {
 func TestASLzeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x06, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x01)
+	cpu.Bus.WriteByte(0x0080, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestASLzeropageNegative(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x06, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x40)
+	cpu.Bus.WriteByte(0x0080, 0x40)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x80, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x80, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getNegative())
 }
 
 func TestASLzeropageZero(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x06, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x80)
+	cpu.Bus.WriteByte(0x0080, 0x80)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getZero())
 }
 
 func TestASLzeropageCarry(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x06, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0xAA)
+	cpu.Bus.WriteByte(0x0080, 0xAA)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x54, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1858,35 +1859,35 @@ func TestASLzeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x16, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0082, 0x01)
+	cpu.Bus.WriteByte(0x0082, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestASLabsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x0E, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x01)
+	cpu.Bus.WriteByte(0x8000, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestASLabsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x1E, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x01)
+	cpu.Bus.WriteByte(0x8002, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// LSR
@@ -1929,35 +1930,35 @@ func TestLSRAccumulatorCarry(t *testing.T) {
 func TestLSRzeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x46, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x02)
+	cpu.Bus.WriteByte(0x0080, 0x02)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestLSRzeropageZero(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x46, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x01)
+	cpu.Bus.WriteByte(0x0080, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getZero())
 }
 
 func TestLSRzeropageCarry(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x46, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x01)
+	cpu.Bus.WriteByte(0x0080, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1965,35 +1966,35 @@ func TestLSRzeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x56, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0082, 0x04)
+	cpu.Bus.WriteByte(0x0082, 0x04)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestLSRabsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x4E, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x04)
+	cpu.Bus.WriteByte(0x8000, 0x04)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestLSRabsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x5E, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x04)
+	cpu.Bus.WriteByte(0x8002, 0x04)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// ROL
@@ -2041,47 +2042,47 @@ func TestROLAccumulatorNegative(t *testing.T) {
 func TestROLZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x26, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x01)
+	cpu.Bus.WriteByte(0x0080, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestROLZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x36, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0082, 0x01)
+	cpu.Bus.WriteByte(0x0082, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestROLAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x2E, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x01)
+	cpu.Bus.WriteByte(0x8000, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestROLAbsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x3E, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x01)
+	cpu.Bus.WriteByte(0x8002, 0x01)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// ROR
@@ -2129,47 +2130,47 @@ func TestRORAccumulatorNegative(t *testing.T) {
 func TestRORZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x66, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x02)
+	cpu.Bus.WriteByte(0x0080, 0x02)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.Read(0x0080))
+	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestRORZeropageX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x76, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x0082, 0x02)
+	cpu.Bus.WriteByte(0x0082, 0x02)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.Read(0x0082))
+	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestRORAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x6E, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x02)
+	cpu.Bus.WriteByte(0x8000, 0x02)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.Read(0x8000))
+	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestRORAbsoluteX(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0x7E, 0x00, 0x80}, 0x0300)
 	cpu.X = 0x02
-	cpu.Bus.Write(0x8002, 0x02)
+	cpu.Bus.WriteByte(0x8002, 0x02)
 
 	cpu.Step()
 
 	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.Read(0x8002))
+	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x8002))
 }
 
 /// CMP
@@ -2213,7 +2214,7 @@ func TestCMPZeropage(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.A = 0x42
 	cpu.Step()
 
@@ -2224,7 +2225,7 @@ func TestCMPZeropage(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.A = 0x43
 	cpu.Step()
 
@@ -2235,7 +2236,7 @@ func TestCMPZeropage(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xC5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x0A)
+	cpu.Bus.WriteByte(0x0080, 0x0A)
 	cpu.A = 0x08
 	cpu.Step()
 
@@ -2250,7 +2251,7 @@ func TestCMPZeropageX(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0082, 0x42)
+	cpu.Bus.WriteByte(0x0082, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x42
 	cpu.Step()
@@ -2262,7 +2263,7 @@ func TestCMPZeropageX(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0082, 0x42)
+	cpu.Bus.WriteByte(0x0082, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x43
 	cpu.Step()
@@ -2274,7 +2275,7 @@ func TestCMPZeropageX(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xD5, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0082, 0x0A)
+	cpu.Bus.WriteByte(0x0082, 0x0A)
 	cpu.X = 0x02
 	cpu.A = 0x08
 	cpu.Step()
@@ -2290,7 +2291,7 @@ func TestCMPAbsolute(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.A = 0x42
 	cpu.Step()
 
@@ -2301,7 +2302,7 @@ func TestCMPAbsolute(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.A = 0x43
 	cpu.Step()
 
@@ -2312,7 +2313,7 @@ func TestCMPAbsolute(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xCD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x0A)
+	cpu.Bus.WriteByte(0x8000, 0x0A)
 	cpu.A = 0x08
 	cpu.Step()
 
@@ -2327,7 +2328,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x42)
+	cpu.Bus.WriteByte(0x8002, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x42
 	cpu.Step()
@@ -2339,7 +2340,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x42)
+	cpu.Bus.WriteByte(0x8002, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x43
 	cpu.Step()
@@ -2351,7 +2352,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xDD, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x0A)
+	cpu.Bus.WriteByte(0x8002, 0x0A)
 	cpu.X = 0x02
 	cpu.A = 0x08
 	cpu.Step()
@@ -2367,7 +2368,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x42)
+	cpu.Bus.WriteByte(0x8002, 0x42)
 	cpu.Y = 0x02
 	cpu.A = 0x42
 	cpu.Step()
@@ -2379,7 +2380,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x42)
+	cpu.Bus.WriteByte(0x8002, 0x42)
 	cpu.Y = 0x02
 	cpu.A = 0x43
 	cpu.Step()
@@ -2391,7 +2392,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xD9, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8002, 0x0A)
+	cpu.Bus.WriteByte(0x8002, 0x0A)
 	cpu.Y = 0x02
 	cpu.A = 0x08
 	cpu.Step()
@@ -2408,7 +2409,7 @@ func TestCMPIndirectX(t *testing.T) {
 	// Equality
 	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0082, 0xC000)
-	cpu.Bus.Write(0xC000, 0x42)
+	cpu.Bus.WriteByte(0xC000, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x42
 	cpu.Step()
@@ -2421,7 +2422,7 @@ func TestCMPIndirectX(t *testing.T) {
 	// Greater Than
 	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0082, 0xC000)
-	cpu.Bus.Write(0xC000, 0x42)
+	cpu.Bus.WriteByte(0xC000, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x43
 	cpu.Step()
@@ -2434,7 +2435,7 @@ func TestCMPIndirectX(t *testing.T) {
 	// Less Than
 	cpu.LoadProgram([]byte{0xC1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0082, 0xC000)
-	cpu.Bus.Write(0xC000, 0x0A)
+	cpu.Bus.WriteByte(0xC000, 0x0A)
 	cpu.X = 0x02
 	cpu.A = 0x08
 	cpu.Step()
@@ -2451,7 +2452,7 @@ func TestCMPIndirectY(t *testing.T) {
 	// Equality
 	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0080, 0xC000)
-	cpu.Bus.Write(0xC002, 0x42)
+	cpu.Bus.WriteByte(0xC002, 0x42)
 	cpu.Y = 0x02
 	cpu.A = 0x42
 	cpu.Step()
@@ -2464,7 +2465,7 @@ func TestCMPIndirectY(t *testing.T) {
 	// Greater Than
 	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0080, 0xC000)
-	cpu.Bus.Write(0xC002, 0x42)
+	cpu.Bus.WriteByte(0xC002, 0x42)
 	cpu.X = 0x02
 	cpu.A = 0x43
 	cpu.Step()
@@ -2477,7 +2478,7 @@ func TestCMPIndirectY(t *testing.T) {
 	// Less Than
 	cpu.LoadProgram([]byte{0xD1, 0x80}, 0x0300)
 	cpu.Bus.Write16(0x0080, 0xC000)
-	cpu.Bus.Write(0xC002, 0x0A)
+	cpu.Bus.WriteByte(0xC002, 0x0A)
 	cpu.X = 0x02
 	cpu.A = 0x08
 	cpu.Step()
@@ -2529,7 +2530,7 @@ func TestCPXZeropage(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.X = 0x42
 	cpu.Step()
 
@@ -2540,7 +2541,7 @@ func TestCPXZeropage(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.X = 0x43
 	cpu.Step()
 
@@ -2551,7 +2552,7 @@ func TestCPXZeropage(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xE4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x0A)
+	cpu.Bus.WriteByte(0x0080, 0x0A)
 	cpu.X = 0x08
 	cpu.Step()
 
@@ -2566,7 +2567,7 @@ func TestCPXAbsolute(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.X = 0x42
 	cpu.Step()
 
@@ -2577,7 +2578,7 @@ func TestCPXAbsolute(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.X = 0x43
 	cpu.Step()
 
@@ -2588,7 +2589,7 @@ func TestCPXAbsolute(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xEC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x0A)
+	cpu.Bus.WriteByte(0x8000, 0x0A)
 	cpu.X = 0x08
 	cpu.Step()
 
@@ -2639,7 +2640,7 @@ func TestCPYZeropage(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.Y = 0x42
 	cpu.Step()
 
@@ -2650,7 +2651,7 @@ func TestCPYZeropage(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x42)
+	cpu.Bus.WriteByte(0x0080, 0x42)
 	cpu.Y = 0x43
 	cpu.Step()
 
@@ -2661,7 +2662,7 @@ func TestCPYZeropage(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xC4, 0x80}, 0x0300)
-	cpu.Bus.Write(0x0080, 0x0A)
+	cpu.Bus.WriteByte(0x0080, 0x0A)
 	cpu.Y = 0x08
 	cpu.Step()
 
@@ -2676,7 +2677,7 @@ func TestCPYAbsolute(t *testing.T) {
 
 	// Equality
 	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.Y = 0x42
 	cpu.Step()
 
@@ -2687,7 +2688,7 @@ func TestCPYAbsolute(t *testing.T) {
 
 	// Greater Than
 	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x42)
+	cpu.Bus.WriteByte(0x8000, 0x42)
 	cpu.Y = 0x43
 	cpu.Step()
 
@@ -2698,7 +2699,7 @@ func TestCPYAbsolute(t *testing.T) {
 
 	// Less Than
 	cpu.LoadProgram([]byte{0xCC, 0x00, 0x80}, 0x0300)
-	cpu.Bus.Write(0x8000, 0x0A)
+	cpu.Bus.WriteByte(0x8000, 0x0A)
 	cpu.Y = 0x08
 	cpu.Step()
 
@@ -2720,9 +2721,9 @@ func TestBRK(t *testing.T) {
 	cpu.Step()
 
 	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0x03, cpu.Bus.Read(0x01FF))
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x01FE))
-	assert.Equal(t, status, cpu.Bus.Read(0x01FD))
+	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x01FF))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x01FE))
+	assert.Equal(t, status, cpu.Bus.ReadByte(0x01FD))
 	assert.True(t, cpu.getBreak())
 
 }
@@ -3004,9 +3005,9 @@ func TestBVS(t *testing.T) {
 func TestBITZeropage(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 
-	cpu.Bus.Write(0x0000, 0xC0)
-	cpu.Bus.Write(0x0010, 0x40)
-	cpu.Bus.Write(0x0020, 0x80)
+	cpu.Bus.WriteByte(0x0000, 0xC0)
+	cpu.Bus.WriteByte(0x0010, 0x40)
+	cpu.Bus.WriteByte(0x0020, 0x80)
 
 	cpu.LoadProgram([]byte{0x24, 0x00}, 0x0300)
 	cpu.A = 0x01
@@ -3047,9 +3048,9 @@ func TestBITZeropage(t *testing.T) {
 func TestBITAbsolute(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 
-	cpu.Bus.Write(0xC000, 0xC0)
-	cpu.Bus.Write(0xC010, 0x40)
-	cpu.Bus.Write(0xC020, 0x80)
+	cpu.Bus.WriteByte(0xC000, 0xC0)
+	cpu.Bus.WriteByte(0xC010, 0x40)
+	cpu.Bus.WriteByte(0xC020, 0x80)
 
 	cpu.LoadProgram([]byte{0x2C, 0x00, 0xC0}, 0x0300)
 	cpu.A = 0x01
@@ -3099,7 +3100,7 @@ func TestPHP(t *testing.T) {
 
 	assert.Equal(t, 0x0301, cpu.PC)
 	assert.Equal(t, 0xFE, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.Bus.Read(0x01FF))
+	assert.Equal(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
 }
 
 //// PLP
@@ -3129,7 +3130,7 @@ func TestPHA(t *testing.T) {
 
 	assert.Equal(t, 0x0301, cpu.PC)
 	assert.Equal(t, 0xFE, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.Bus.Read(0x01FF))
+	assert.Equal(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
 }
 
 //// PLP
@@ -3196,8 +3197,8 @@ func TestJSR(t *testing.T) {
 	assert.Equal(t, 0xFD, cpu.SP)
 
 	// We expect PC - 1 (e.g. 3rd byte of JSR) to be on the stack
-	assert.Equal(t, 0x03, cpu.Bus.Read(0x1FF))
-	assert.Equal(t, 0x02, cpu.Bus.Read(0x1FE))
+	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x1FF))
+	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x1FE))
 }
 
 //// RTS
