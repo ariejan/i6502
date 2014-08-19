@@ -90,10 +90,16 @@ func (c *Cpu) handleIrq(PC uint16) {
 // and point the Program Counter to the beginning of the program.
 func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	for i, b := range data {
-		c.Bus.Write(location+uint16(i), b)
+		c.Bus.WriteByte(location+uint16(i), b)
 	}
 
 	c.PC = location
+}
+
+func (c *Cpu) Steps(steps int) {
+	for i := 0; i < steps; i++ {
+		c.Step()
+	}
 }
 
 // Read and execute the instruction pointed to by the Program Counter (PC)
@@ -158,13 +164,13 @@ func (c *Cpu) execute(instruction Instruction) {
 		c.setA(c.A ^ value)
 	case sta:
 		address := c.memoryAddress(instruction)
-		c.Bus.Write(address, c.A)
+		c.Bus.WriteByte(address, c.A)
 	case stx:
 		address := c.memoryAddress(instruction)
-		c.Bus.Write(address, c.X)
+		c.Bus.WriteByte(address, c.X)
 	case sty:
 		address := c.memoryAddress(instruction)
-		c.Bus.Write(address, c.Y)
+		c.Bus.WriteByte(address, c.Y)
 	case tax:
 		c.setX(c.A)
 	case tay:
@@ -264,7 +270,7 @@ func (c *Cpu) execute(instruction Instruction) {
 
 func (c *Cpu) readNextInstruction() Instruction {
 	// Read the opcode
-	opcode := c.Bus.Read(c.PC)
+	opcode := c.Bus.ReadByte(c.PC)
 
 	optype, ok := opTypes[opcode]
 	if !ok {
@@ -275,7 +281,7 @@ func (c *Cpu) readNextInstruction() Instruction {
 	switch instruction.Size {
 	case 1: // Zero operand instruction
 	case 2: // 8-bit operand
-		instruction.Op8 = c.Bus.Read(c.PC + 1)
+		instruction.Op8 = c.Bus.ReadByte(c.PC + 1)
 	case 3: // 16-bit operand
 		instruction.Op16 = c.Bus.Read16(c.PC + 1)
 	}
@@ -297,7 +303,7 @@ func (c *Cpu) resolveOperand(in Instruction) uint8 {
 	case immediate:
 		return in.Op8
 	default:
-		return c.Bus.Read(c.memoryAddress(in))
+		return c.Bus.ReadByte(c.memoryAddress(in))
 	}
 }
 
@@ -356,17 +362,17 @@ func (c *Cpu) sbc(in Instruction) {
 
 func (c *Cpu) inc(in Instruction) {
 	address := c.memoryAddress(in)
-	value := c.Bus.Read(address) + 1
+	value := c.Bus.ReadByte(address) + 1
 
-	c.Bus.Write(address, value)
+	c.Bus.WriteByte(address, value)
 	c.setArithmeticFlags(value)
 }
 
 func (c *Cpu) dec(in Instruction) {
 	address := c.memoryAddress(in)
-	value := c.Bus.Read(address) - 1
+	value := c.Bus.ReadByte(address) - 1
 
-	c.Bus.Write(address, value)
+	c.Bus.WriteByte(address, value)
 	c.setArithmeticFlags(value)
 }
 
@@ -378,10 +384,10 @@ func (c *Cpu) asl(in Instruction) {
 		c.setArithmeticFlags(c.A)
 	default:
 		address := c.memoryAddress(in)
-		value := c.Bus.Read(address)
+		value := c.Bus.ReadByte(address)
 		c.setCarry((value >> 7) == 1)
 		value <<= 1
-		c.Bus.Write(address, value)
+		c.Bus.WriteByte(address, value)
 		c.setArithmeticFlags(value)
 	}
 }
@@ -394,10 +400,10 @@ func (c *Cpu) lsr(in Instruction) {
 		c.setArithmeticFlags(c.A)
 	default:
 		address := c.memoryAddress(in)
-		value := c.Bus.Read(address)
+		value := c.Bus.ReadByte(address)
 		c.setCarry((value & 0x01) == 1)
 		value >>= 1
-		c.Bus.Write(address, value)
+		c.Bus.WriteByte(address, value)
 		c.setArithmeticFlags(value)
 	}
 }
@@ -412,10 +418,10 @@ func (c *Cpu) rol(in Instruction) {
 		c.setArithmeticFlags(c.A)
 	default:
 		address := c.memoryAddress(in)
-		value := c.Bus.Read(address)
+		value := c.Bus.ReadByte(address)
 		c.setCarry((value & 0x80) != 0)
 		value = value<<1 | carry
-		c.Bus.Write(address, value)
+		c.Bus.WriteByte(address, value)
 		c.setArithmeticFlags(value)
 	}
 }
@@ -430,10 +436,10 @@ func (c *Cpu) ror(in Instruction) {
 		c.setArithmeticFlags(c.A)
 	default:
 		address := c.memoryAddress(in)
-		value := c.Bus.Read(address)
+		value := c.Bus.ReadByte(address)
 		c.setCarry(value&0x01 == 1)
 		value = value>>1 | carry<<7
-		c.Bus.Write(address, value)
+		c.Bus.WriteByte(address, value)
 		c.setArithmeticFlags(value)
 	}
 }
@@ -513,15 +519,15 @@ func (c *Cpu) sbcDecimal(a uint8, b uint8, carryIn uint8) {
 }
 
 func (c *Cpu) stackPush(data byte) {
-	c.Bus.Write(StackBase+uint16(c.SP), data)
+	c.Bus.WriteByte(StackBase+uint16(c.SP), data)
 	c.SP -= 1
 }
 
 func (c *Cpu) stackPeek() byte {
-	return c.Bus.Read(StackBase + uint16(c.SP+1))
+	return c.Bus.ReadByte(StackBase + uint16(c.SP+1))
 }
 
 func (c *Cpu) stackPop() byte {
 	c.SP += 1
-	return c.Bus.Read(StackBase + uint16(c.SP))
+	return c.Bus.ReadByte(StackBase + uint16(c.SP))
 }

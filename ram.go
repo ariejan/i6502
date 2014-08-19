@@ -16,10 +16,10 @@ func (r *Ram) Size() uint16 {
 	return uint16(len(r.data))
 }
 
-func (r *Ram) Read(address uint16) byte {
+func (r *Ram) ReadByte(address uint16) byte {
 	return r.data[address]
 }
 
-func (r *Ram) Write(address uint16, data byte) {
+func (r *Ram) WriteByte(address uint16, data byte) {
 	r.data[address] = data
 }

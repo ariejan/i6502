@@ -62,13 +62,13 @@ Read an 8-bit value from Memory attached at the 16-bit address.
 
 This will panic if you try to read from an address that has no Memory attached.
 */
-func (a *AddressBus) Read(address uint16) byte {
+func (a *AddressBus) ReadByte(address uint16) byte {
 	addressable, err := a.addressableForAddress(address)
 	if err != nil {
 		panic(err)
 	}
 
-	return addressable.memory.Read(address - addressable.start)
+	return addressable.memory.ReadByte(address - addressable.start)
 }
 
 /*
@@ -77,8 +77,8 @@ Convenience method to quickly read a 16-bit value from address and address + 1.
 Note that we first read the LOW byte from address and then the HIGH byte from address + 1.
 */
 func (a *AddressBus) Read16(address uint16) uint16 {
-	lo := uint16(a.Read(address))
-	hi := uint16(a.Read(address + 1))
+	lo := uint16(a.ReadByte(address))
+	hi := uint16(a.ReadByte(address + 1))
 
 	return (hi << 8) | lo
 }
@@ -89,13 +89,13 @@ Write an 8-bit value to the Memory at the 16-bit address.
 This will panic if you try to write to an address that has no Memory attached or
 Memory that is read-only, like Rom.
 */
-func (a *AddressBus) Write(address uint16, data byte) {
+func (a *AddressBus) WriteByte(address uint16, data byte) {
 	addressable, err := a.addressableForAddress(address)
 	if err != nil {
 		panic(err)
 	}
 
-	addressable.memory.Write(address-addressable.start, data)
+	addressable.memory.WriteByte(address-addressable.start, data)
 }
 
 /*
@@ -104,8 +104,8 @@ Convenience method to quickly write a 16-bit value to address and address + 1.
 Note that the LOW byte will be stored in address and the high byte in address + 1.
 */
 func (a *AddressBus) Write16(address uint16, data uint16) {
-	a.Write(address, byte(data))
-	a.Write(address+1, byte(data>>8))
+	a.WriteByte(address, byte(data))
+	a.WriteByte(address+1, byte(data>>8))
 }
 
 // Returns the addressable for the specified address, or an error if no addressable exists.

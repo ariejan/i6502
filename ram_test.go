@@ -1,8 +1,9 @@
 package i6502
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRamSize(t *testing.T) {
@@ -18,6 +19,6 @@ func TestRamReadWrite(t *testing.T) {
 		assert.Equal(t, 0x00, ram.data[i])
 	}
 
-	ram.Write(0x1000, 0x42)
-	assert.Equal(t, 0x42, ram.Read(0x1000))
+	ram.WriteByte(0x1000, 0x42)
+	assert.Equal(t, 0x42, ram.ReadByte(0x1000))
 }

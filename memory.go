@@ -6,6 +6,6 @@ and become accessible by the Cpu.
 */
 type Memory interface {
 	Size() uint16
-	Read(address uint16) byte
-	Write(address uint16, data byte)
+	ReadByte(address uint16) byte
+	WriteByte(address uint16, data byte)
 }
