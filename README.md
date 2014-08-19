@@ -26,13 +26,14 @@ The 65C02 is a updated version of the 6502. It includes some bug fixes and new i
  * 6502 Microprocessor, fully tested
  * 16-bit address bus, with attachable memory
  * RAM Memory
+ * 6551 Asynchronous Communications Interface Adapter (ACIA)
 
 ## What's not (yet) included?
 
  * Proper Golang packaging and documentation
  * 65C02 support
  * Roms
- * I/O (VIA 6522, ACIA 6551)
+ * I/O (VIA 6522)
  * Batteries
  
 ## Getting started
