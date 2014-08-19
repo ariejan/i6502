@@ -96,6 +96,12 @@ func (c *Cpu) LoadProgram(data []byte, location uint16) {
 	c.PC = location
 }
 
+func (c *Cpu) Steps(steps int) {
+	for i := 0; i < steps; i++ {
+		c.Step()
+	}
+}
+
 // Read and execute the instruction pointed to by the Program Counter (PC)
 func (c *Cpu) Step() {
 	instruction := c.readNextInstruction()

@@ -119,3 +119,39 @@ func TestAciaStatusRegister(t *testing.T) {
 	a.overrun = true
 	assert.Equal(t, 0x04, a.ReadByte(aciaStatus))
 }
+
+func TestAciaIntegration(t *testing.T) {
+	// Create a system
+	// * 32kB RAM at 0x0000-7FFFF
+	// * ACIA at 0x8800-8803
+	ram, _ := NewRam(0x8000)
+	acia, _ := NewAcia6551()
+	bus, _ := NewAddressBus()
+	bus.Attach(ram, 0x0000)
+	bus.Attach(acia, 0x8800)
+	cpu, _ := NewCpu(bus)
+
+	program := []byte{
+		0xA9, 0x00, // LDA #$00
+		0x8D, 0x01, 0x88, // STA AciaStatus (Reset)
+		0xA9, 0x42, // LDA #$42
+		0x8D, 0x00, 0x88, // STA AciaData (Write)
+		0xAD, 0x00, 0x88, // LDA AciaData (Read)
+	}
+
+	cpu.LoadProgram(program, 0x0200)
+	cpu.Steps(2)
+
+	acia.Write([]byte{0xAB})
+
+	cpu.Steps(3)
+
+	value := make([]byte, 1)
+	bytesRead, _ := acia.Read(value)
+
+	if assert.Equal(t, 1, bytesRead) {
+		assert.Equal(t, 0x42, value[0])
+	}
+
+	assert.Equal(t, 0xAB, cpu.A)
+}
