@@ -22,7 +22,14 @@ type Cpu struct {
 	SP byte   // Stack Pointer
 
 	Bus *AddressBus // The address bus
+
+	CpuType int // Which type of CPU is begin emulated
 }
+
+const (
+	Cpu6502  = iota // The original MOS 6502, no bugs
+	Cpu65C02        // The WDC 65C02 version
+)
 
 const (
 	ZeropageBase = 0x0000 // 0x0000-00FF Reserved for zeropage instructions
@@ -35,7 +42,7 @@ const (
 
 // Create an new Cpu, using the AddressBus for accessing memory.
 func NewCpu(bus *AddressBus) (*Cpu, error) {
-	return &Cpu{Bus: bus}, nil
+	return &Cpu{Bus: bus, CpuType: Cpu6502}, nil
 }
 
 // Returns a string containing the current state of the CPU.
