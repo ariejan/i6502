@@ -95,10 +95,14 @@ func (a *Acia6551) statusRegister() byte {
 // Implements io.Reader, for external programs to read TX'ed data from
 // the serial output.
 func (a *Acia6551) Read(p []byte) (n int, err error) {
-	a.txEmpty = true
-	copy(p, []byte{a.tx})
-	// TODO: Handle txInterrupt
-	return 1, nil
+	if a.txEmpty {
+		return 0, nil
+	} else {
+		a.txEmpty = true
+		copy(p, []byte{a.tx})
+		// TODO: Handle txInterrupt
+		return 1, nil
+	}
 }
 
 // Implements io.Writer, for external programs to write to the

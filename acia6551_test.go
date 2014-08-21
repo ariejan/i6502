@@ -36,6 +36,18 @@ func TestAciaReset(t *testing.T) {
 	assert.Equal(t, 0, a.controlData)
 }
 
+func TestAciaReaderWithTxEmpty(t *testing.T) {
+	a := AciaSubject()
+
+	// Nothing to read
+	assert.True(t, a.txEmpty)
+
+	value := make([]byte, 1)
+	bytesRead, _ := a.Read(value)
+
+	assert.Equal(t, 0, bytesRead)
+}
+
 func TestAciaWriteByteAndReader(t *testing.T) {
 	a := AciaSubject()
 
