@@ -18,6 +18,10 @@ func TestNewAcia6551(t *testing.T) {
 	assert.Equal(t, 0x4, acia.Size())
 }
 
+func TestAciaAsMemory(t *testing.T) {
+	assert.Implements(t, (*Memory)(nil), new(Acia6551))
+}
+
 func TestAciaReset(t *testing.T) {
 	a := AciaSubject()
 

@@ -29,10 +29,10 @@ func (r *Rom) Size() uint16 {
 	return uint16(len(r.data))
 }
 
-func (r *Rom) Read(address uint16) byte {
+func (r *Rom) ReadByte(address uint16) byte {
 	return r.data[address]
 }
 
-func (r *Rom) Write(address uint16, data byte) {
+func (r *Rom) WriteByte(address uint16, data byte) {
 	panic(fmt.Errorf("Trying to write to ROM at 0x%04X", address))
 }

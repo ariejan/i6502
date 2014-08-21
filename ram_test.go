@@ -6,6 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestRamAsMemory(t *testing.T) {
+	assert.Implements(t, (*Memory)(nil), new(Ram))
+}
+
 func TestRamSize(t *testing.T) {
 	ram, _ := NewRam(0x8000) // 32 kB
 	assert.Equal(t, 0x8000, ram.Size())
