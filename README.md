@@ -1,6 +1,7 @@
 # i6502 - A 6502 Emulator
 
 [![Build Status](https://travis-ci.org/ariejan/i6502.svg?branch=master)](https://travis-ci.org/ariejan/i6502)
+[![Go Docs](http://b.repl.ca/v1/Go-Docs-blue.png)](http://godoc.org/github.com/ariejan/i6502)
 
 This is an emulator of the i6502 hardward project I'm doing.
 
