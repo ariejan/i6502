@@ -32,10 +32,12 @@ type Acia6551 struct {
 	txIrqEnabled bool
 
 	overrun bool
+
+	output chan []byte
 }
 
-func NewAcia6551() (*Acia6551, error) {
-	acia := &Acia6551{}
+func NewAcia6551(output chan []byte) (*Acia6551, error) {
+	acia := &Acia6551{output: output}
 	acia.Reset()
 
 	return acia, nil
@@ -95,6 +97,10 @@ func (a *Acia6551) statusRegister() byte {
 // Implements io.Reader, for external programs to read TX'ed data from
 // the serial output.
 func (a *Acia6551) Read(p []byte) (n int, err error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
 	if a.txEmpty {
 		return 0, nil
 	} else {
@@ -164,6 +170,7 @@ func (a *Acia6551) rxWrite(data byte) {
 }
 
 func (a *Acia6551) txWrite(data byte) {
+	a.output <- []byte{data}
 	a.tx = data
-	a.txEmpty = false
+	// a.txEmpty = false
 }

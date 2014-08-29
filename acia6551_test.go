@@ -6,13 +6,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func AciaSubject() *Acia6551 {
-	acia, _ := NewAcia6551()
-	return acia
+func AciaSubject() (*Acia6551, chan []byte) {
+	output := make(chan []byte)
+	acia, _ := NewAcia6551(output)
+	return acia, output
 }
 
 func TestNewAcia6551(t *testing.T) {
-	acia, err := NewAcia6551()
+	output := make(chan []byte)
+	acia, err := NewAcia6551(output)
 
 	assert.Nil(t, err)
 	assert.Equal(t, 0x4, acia.Size())
@@ -23,7 +25,7 @@ func TestAciaAsMemory(t *testing.T) {
 }
 
 func TestAciaReset(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 
 	a.Reset()
 
@@ -41,7 +43,7 @@ func TestAciaReset(t *testing.T) {
 }
 
 func TestAciaReaderWithTxEmpty(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 
 	// Nothing to read
 	assert.True(t, a.txEmpty)
@@ -53,22 +55,26 @@ func TestAciaReaderWithTxEmpty(t *testing.T) {
 }
 
 func TestAciaWriteByteAndReader(t *testing.T) {
-	a := AciaSubject()
+	var value []byte
+
+	a, o := AciaSubject()
+	done := make(chan bool)
+
+	go func() {
+		value = <-o
+		done <- true
+	}()
 
 	// CPU writes data
 	a.WriteByte(aciaData, 0x42)
 
-	// System reads from Tx
-	value := make([]byte, 1)
-	bytesRead, _ := a.Read(value)
+	<-done
 
-	if assert.Equal(t, 1, bytesRead) {
-		assert.Equal(t, 0x42, value[0])
-	}
+	assert.Equal(t, 0x42, value[0])
 }
 
 func TestAciaWriterAndReadByte(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 
 	// System writes a single byte
 	bytesWritten, _ := a.Write([]byte{0x42})
@@ -86,7 +92,7 @@ func TestAciaWriterAndReadByte(t *testing.T) {
 }
 
 func TestAciaCommandRegister(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 	assert.False(t, a.rxIrqEnabled)
 	assert.False(t, a.txIrqEnabled)
 
@@ -106,14 +112,14 @@ func TestAciaCommandRegister(t *testing.T) {
 }
 
 func TestAciaControlRegister(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 
 	a.WriteByte(aciaControl, 0xB8)
 	assert.Equal(t, 0xB8, a.ReadByte(aciaControl))
 }
 
 func TestAciaStatusRegister(t *testing.T) {
-	a := AciaSubject()
+	a, _ := AciaSubject()
 
 	a.rxFull = false
 	a.txEmpty = false
@@ -137,11 +143,16 @@ func TestAciaStatusRegister(t *testing.T) {
 }
 
 func TestAciaIntegration(t *testing.T) {
+	var value []byte
+
+	output := make(chan []byte)
+	done := make(chan bool)
+
 	// Create a system
 	// * 32kB RAM at 0x0000-7FFFF
 	// * ACIA at 0x8800-8803
 	ram, _ := NewRam(0x8000)
-	acia, _ := NewAcia6551()
+	acia, _ := NewAcia6551(output)
 	bus, _ := NewAddressBus()
 	bus.Attach(ram, 0x0000)
 	bus.Attach(acia, 0x8800)
@@ -158,16 +169,20 @@ func TestAciaIntegration(t *testing.T) {
 	cpu.LoadProgram(program, 0x0200)
 	cpu.Steps(2)
 
+	go func() {
+		value = <-output
+		done <- true
+	}()
+
 	acia.Write([]byte{0xAB})
 
 	cpu.Steps(3)
 
-	value := make([]byte, 1)
-	bytesRead, _ := acia.Read(value)
+	<-done
 
-	if assert.Equal(t, 1, bytesRead) {
-		assert.Equal(t, 0x42, value[0])
-	}
+	// value := make([]byte, 1)
+	// bytesRead, _ := acia.Read(value)
 
+	assert.Equal(t, 0x42, value[0])
 	assert.Equal(t, 0xAB, cpu.A)
 }
