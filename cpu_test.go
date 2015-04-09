@@ -40,29 +40,29 @@ func TestStackPushPopPeek(t *testing.T) {
 	assert := assert.New(t)
 	cpu, _, _ := NewRamMachine()
 
-	assert.Equal(0xFF, cpu.SP)
+	assert.EqualValues(0xFF, cpu.SP)
 
 	cpu.stackPush(0x42)
 	cpu.stackPush(0xA0)
 
-	assert.Equal(0xFD, cpu.SP)
-	assert.Equal(0x42, cpu.Bus.ReadByte(0x1FF))
-	assert.Equal(0xA0, cpu.Bus.ReadByte(0x1FE))
+	assert.EqualValues(0xFD, cpu.SP)
+	assert.EqualValues(0x42, cpu.Bus.ReadByte(0x1FF))
+	assert.EqualValues(0xA0, cpu.Bus.ReadByte(0x1FE))
 
 	peekValue := cpu.stackPeek()
-	assert.Equal(0xFD, cpu.SP)
-	assert.Equal(0xA0, peekValue)
+	assert.EqualValues(0xFD, cpu.SP)
+	assert.EqualValues(0xA0, peekValue)
 
 	popValue := cpu.stackPop()
-	assert.Equal(0xFE, cpu.SP)
-	assert.Equal(0xA0, popValue)
+	assert.EqualValues(0xFE, cpu.SP)
+	assert.EqualValues(0xA0, popValue)
 }
 
 func TestCpuAddressBus(t *testing.T) {
 	assert := assert.New(t)
 
 	cpu, bus, _ := NewRamMachine()
-	assert.Equal(cpu.Bus, bus)
+	assert.EqualValues(cpu.Bus, bus)
 	assert.NotNil(cpu.Bus)
 }
 
@@ -76,13 +76,13 @@ func TestCpuReset(t *testing.T) {
 
 	// **1101** is specified, but we are satisfied with
 	// 00110100 here.
-	assert.Equal(0x34, cpu.P)
+	assert.EqualValues(0x34, cpu.P)
 	assert.True(cpu.getIrqDisable())
 	assert.False(cpu.getDecimal())
 	assert.True(cpu.getBreak())
 
 	// Read PC from $FFFC-FFFD
-	assert.Equal(0x1234, cpu.PC)
+	assert.EqualValues(0x1234, cpu.PC)
 }
 
 func TestCpuInterrupt(t *testing.T) {
@@ -93,17 +93,17 @@ func TestCpuInterrupt(t *testing.T) {
 	cpu.SP = 0xFF                   // Set the stack pointer
 	cpu.PC = 0x0380                 // Some fake point of execution
 
-	assert.Equal(t, 0xFF, cpu.SP)
+	assert.EqualValues(t, 0xFF, cpu.SP)
 
 	status := cpu.P
 
 	// Trigger IRQ
 	cpu.Interrupt()
 
-	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x01FF))
-	assert.Equal(t, 0x80, cpu.Bus.ReadByte(0x01FE))
-	assert.Equal(t, status, cpu.Bus.ReadByte(0x01FD))
+	assert.EqualValues(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0x03, cpu.Bus.ReadByte(0x01FF))
+	assert.EqualValues(t, 0x80, cpu.Bus.ReadByte(0x01FE))
+	assert.EqualValues(t, status, cpu.Bus.ReadByte(0x01FD))
 	assert.True(t, cpu.getIrqDisable())
 }
 
@@ -115,11 +115,11 @@ func TestProgramLoading(t *testing.T) {
 	cpu, bus, _ := NewRamMachine()
 	cpu.LoadProgram(program, 0x0300)
 
-	assert.Equal(0xEA, bus.ReadByte(0x0300))
-	assert.Equal(0xEB, bus.ReadByte(0x0301))
-	assert.Equal(0xEC, bus.ReadByte(0x0302))
+	assert.EqualValues(0xEA, bus.ReadByte(0x0300))
+	assert.EqualValues(0xEB, bus.ReadByte(0x0301))
+	assert.EqualValues(0xEC, bus.ReadByte(0x0302))
 
-	assert.Equal(0x0300, cpu.PC)
+	assert.EqualValues(0x0300, cpu.PC)
 }
 
 //// NOP
@@ -128,7 +128,7 @@ func TestNOP(t *testing.T) {
 	cpu, _, _ := NewRamMachine()
 	cpu.LoadProgram([]byte{0xEA}, 0x0300)
 	cpu.Step()
-	assert.Equal(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x0301, cpu.PC)
 }
 
 func TestSEC(t *testing.T) {
@@ -208,8 +208,8 @@ func TestADCImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x95, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x95, cpu.A)
 	assert.False(t, cpu.getCarry())
 }
 
@@ -220,8 +220,8 @@ func TestADCWithCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x13, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x13, cpu.A)
 	assert.True(t, cpu.getCarry())
 }
 
@@ -234,8 +234,8 @@ func TestADCWithCarryOver(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x0A, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0A, cpu.A)
 	assert.False(t, cpu.getCarry())
 }
 
@@ -250,8 +250,8 @@ func TestADCWithOverflow(t *testing.T) {
 	// -48 + -112 = 96 => signed overflow
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x60, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x60, cpu.A)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getOverflow())
 }
@@ -263,8 +263,8 @@ func TestADCZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -275,8 +275,8 @@ func TestADCNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF7, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF7, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -288,8 +288,8 @@ func TestADCDecimal(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x47, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x47, cpu.A)
 }
 
 func TestADCZeropage(t *testing.T) {
@@ -300,8 +300,8 @@ func TestADCZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCZeropageX(t *testing.T) {
@@ -313,8 +313,8 @@ func TestADCZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCAbsolute(t *testing.T) {
@@ -325,8 +325,8 @@ func TestADCAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCAbsoluteX(t *testing.T) {
@@ -338,8 +338,8 @@ func TestADCAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCAbsoluteY(t *testing.T) {
@@ -351,8 +351,8 @@ func TestADCAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCIndirectX(t *testing.T) {
@@ -365,8 +365,8 @@ func TestADCIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 func TestADCIndirectY(t *testing.T) {
@@ -379,8 +379,8 @@ func TestADCIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 }
 
 //// SBC
@@ -393,8 +393,8 @@ func TestSBCImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x41, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x41, cpu.A)
 	assert.True(t, cpu.getCarry())
 }
 
@@ -406,8 +406,8 @@ func TestSBCWithoutCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x40, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x40, cpu.A)
 	assert.True(t, cpu.getCarry())
 }
 
@@ -419,8 +419,8 @@ func TestSBCNegativeNoCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xff, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xff, cpu.A)
 	assert.False(t, cpu.getCarry())
 	assert.True(t, cpu.getNegative())
 }
@@ -433,8 +433,8 @@ func TestSBCDecimal(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x28, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x28, cpu.A)
 }
 
 func TestSBCZero(t *testing.T) {
@@ -445,8 +445,8 @@ func TestSBCZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -459,8 +459,8 @@ func TestSBCZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestZeropageX(t *testing.T) {
@@ -473,8 +473,8 @@ func TestZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestSBCAbsolute(t *testing.T) {
@@ -486,8 +486,8 @@ func TestSBCAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestSBCAbsoluteX(t *testing.T) {
@@ -500,8 +500,8 @@ func TestSBCAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestSBCAbsoluteY(t *testing.T) {
@@ -514,8 +514,8 @@ func TestSBCAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestSBCIndirectX(t *testing.T) {
@@ -529,8 +529,8 @@ func TestSBCIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 func TestSBCIndirectY(t *testing.T) {
@@ -544,8 +544,8 @@ func TestSBCIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x30, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x30, cpu.A)
 }
 
 //// INX
@@ -557,8 +557,8 @@ func TestINX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x43, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x43, cpu.X)
 }
 
 func TestINXRollover(t *testing.T) {
@@ -568,8 +568,8 @@ func TestINXRollover(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.X)
 }
 
 //// INY
@@ -581,8 +581,8 @@ func TestINY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x43, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x43, cpu.Y)
 }
 
 func TestINYRollover(t *testing.T) {
@@ -592,8 +592,8 @@ func TestINYRollover(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Y)
 }
 
 //// INC
@@ -605,8 +605,8 @@ func TestINCZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x42))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x42))
 }
 
 func TestINCZeropageX(t *testing.T) {
@@ -617,8 +617,8 @@ func TestINCZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x43))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x43))
 }
 
 func TestINCAbsolute(t *testing.T) {
@@ -628,8 +628,8 @@ func TestINCAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestINCAbsoluteX(t *testing.T) {
@@ -640,8 +640,8 @@ func TestINCAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// DEX
@@ -653,8 +653,8 @@ func TestDEX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x41, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x41, cpu.X)
 }
 
 func TestDEXRollover(t *testing.T) {
@@ -664,8 +664,8 @@ func TestDEXRollover(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.X)
 }
 
 //// DEY
@@ -677,8 +677,8 @@ func TestDEY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x41, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x41, cpu.Y)
 }
 
 func TestDEYRollover(t *testing.T) {
@@ -688,8 +688,8 @@ func TestDEYRollover(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.Y)
 }
 
 //// DEC
@@ -701,8 +701,8 @@ func TestDECZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x42))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x42))
 }
 
 func TestDECZeropageX(t *testing.T) {
@@ -713,8 +713,8 @@ func TestDECZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x43))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x43))
 }
 
 func TestDECAbsolute(t *testing.T) {
@@ -724,8 +724,8 @@ func TestDECAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestDECAbsoluteX(t *testing.T) {
@@ -736,8 +736,8 @@ func TestDECAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x8002))
 }
 
 //// LDA
@@ -748,8 +748,8 @@ func TestLDAImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.A)
 }
 
 func TestLDANegative(t *testing.T) {
@@ -758,8 +758,8 @@ func TestLDANegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xAE, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xAE, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -769,8 +769,8 @@ func TestLDAZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -781,8 +781,8 @@ func TestLDAZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAZeropageX(t *testing.T) {
@@ -793,8 +793,8 @@ func TestLDAZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAAbsolute(t *testing.T) {
@@ -804,8 +804,8 @@ func TestLDAAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAAbsoluteX(t *testing.T) {
@@ -816,8 +816,8 @@ func TestLDAAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAAbsoluteY(t *testing.T) {
@@ -828,8 +828,8 @@ func TestLDAAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAIndirectX(t *testing.T) {
@@ -841,8 +841,8 @@ func TestLDAIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 func TestLDAIndirectY(t *testing.T) {
@@ -854,8 +854,8 @@ func TestLDAIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.A)
 }
 
 //// LDX
@@ -866,8 +866,8 @@ func TestLDXImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.X)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.X)
 }
 
 func TestLDXNegative(t *testing.T) {
@@ -876,8 +876,8 @@ func TestLDXNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xAE, cpu.X)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xAE, cpu.X)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -887,8 +887,8 @@ func TestLDXZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.X)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.X)
 	assert.True(t, cpu.getZero())
 }
 
@@ -899,8 +899,8 @@ func TestLDXZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.X)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.X)
 }
 
 func TestLDXZeropageY(t *testing.T) {
@@ -911,8 +911,8 @@ func TestLDXZeropageY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.X)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.X)
 }
 
 func TestLDXAbsolute(t *testing.T) {
@@ -922,8 +922,8 @@ func TestLDXAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.X)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.X)
 }
 
 func TestLDXAbsoluteY(t *testing.T) {
@@ -934,8 +934,8 @@ func TestLDXAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.X)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.X)
 }
 
 //// LDY
@@ -946,8 +946,8 @@ func TestLDYImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Y)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Y)
 }
 
 func TestLDYNegative(t *testing.T) {
@@ -956,8 +956,8 @@ func TestLDYNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xAE, cpu.Y)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xAE, cpu.Y)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -967,8 +967,8 @@ func TestLDYZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Y)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Y)
 	assert.True(t, cpu.getZero())
 }
 
@@ -979,8 +979,8 @@ func TestLDYZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.Y)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.Y)
 }
 
 func TestLDYZeropageX(t *testing.T) {
@@ -991,8 +991,8 @@ func TestLDYZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.Y)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.Y)
 }
 
 func TestLDYAbsolute(t *testing.T) {
@@ -1002,8 +1002,8 @@ func TestLDYAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.Y)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.Y)
 }
 
 func TestLDYAbsoluteX(t *testing.T) {
@@ -1014,8 +1014,8 @@ func TestLDYAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF8, cpu.Y)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF8, cpu.Y)
 }
 
 //// ORA
@@ -1027,8 +1027,8 @@ func TestORAImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x72, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x72, cpu.A)
 }
 
 func TestORANegative(t *testing.T) {
@@ -1038,8 +1038,8 @@ func TestORANegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1050,8 +1050,8 @@ func TestORAZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1063,8 +1063,8 @@ func TestORAZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAZeropageX(t *testing.T) {
@@ -1076,8 +1076,8 @@ func TestORAZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAAbsolute(t *testing.T) {
@@ -1088,8 +1088,8 @@ func TestORAAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAAbsoluteX(t *testing.T) {
@@ -1101,8 +1101,8 @@ func TestORAAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAAbsoluteY(t *testing.T) {
@@ -1114,8 +1114,8 @@ func TestORAAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAIndirectX(t *testing.T) {
@@ -1128,8 +1128,8 @@ func TestORAIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 func TestORAIndirectY(t *testing.T) {
@@ -1142,8 +1142,8 @@ func TestORAIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xF2, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xF2, cpu.A)
 }
 
 //// AND
@@ -1155,8 +1155,8 @@ func TestANDImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDNegative(t *testing.T) {
@@ -1166,8 +1166,8 @@ func TestANDNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xA0, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xA0, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1178,8 +1178,8 @@ func TestANDZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1191,8 +1191,8 @@ func TestANDZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x09, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x09, cpu.A)
 }
 
 func TestANDZeropageX(t *testing.T) {
@@ -1204,8 +1204,8 @@ func TestANDZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDAbsolute(t *testing.T) {
@@ -1216,8 +1216,8 @@ func TestANDAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDAbsoluteX(t *testing.T) {
@@ -1229,8 +1229,8 @@ func TestANDAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDAbsoluteY(t *testing.T) {
@@ -1242,8 +1242,8 @@ func TestANDAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDIndirectX(t *testing.T) {
@@ -1256,8 +1256,8 @@ func TestANDIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestANDIndirectY(t *testing.T) {
@@ -1270,8 +1270,8 @@ func TestANDIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 //// EOR
@@ -1283,8 +1283,8 @@ func TestEORImmediate(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORNegative(t *testing.T) {
@@ -1294,8 +1294,8 @@ func TestEORNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xD3, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xD3, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1306,8 +1306,8 @@ func TestEORZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1319,8 +1319,8 @@ func TestEORZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORZeropageX(t *testing.T) {
@@ -1332,8 +1332,8 @@ func TestEORZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORAbsolute(t *testing.T) {
@@ -1344,8 +1344,8 @@ func TestEORAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORAbsoluteX(t *testing.T) {
@@ -1357,8 +1357,8 @@ func TestEORAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORAbsoluteY(t *testing.T) {
@@ -1370,8 +1370,8 @@ func TestEORAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORIndirectX(t *testing.T) {
@@ -1384,8 +1384,8 @@ func TestEORIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 func TestEORIndirectY(t *testing.T) {
@@ -1398,8 +1398,8 @@ func TestEORIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x3D, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x3D, cpu.A)
 }
 
 //// STA
@@ -1411,8 +1411,8 @@ func TestSTAZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTAZeropageX(t *testing.T) {
@@ -1423,8 +1423,8 @@ func TestSTAZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTAAbsolute(t *testing.T) {
@@ -1434,8 +1434,8 @@ func TestSTAAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestSTAAbsoluteX(t *testing.T) {
@@ -1446,8 +1446,8 @@ func TestSTAAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x8002))
 }
 
 func TestSTAAbsoluteY(t *testing.T) {
@@ -1459,8 +1459,8 @@ func TestSTAAbsoluteY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x8002))
 }
 
 func TestSTAIndirectX(t *testing.T) {
@@ -1472,8 +1472,8 @@ func TestSTAIndirectX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0xC000))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0xC000))
 }
 
 func TestSTAIndirectY(t *testing.T) {
@@ -1485,8 +1485,8 @@ func TestSTAIndirectY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0xC002))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0xC002))
 }
 
 //// STX
@@ -1498,8 +1498,8 @@ func TestSTXZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTXZeropageY(t *testing.T) {
@@ -1510,8 +1510,8 @@ func TestSTXZeropageY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTXAbsolute(t *testing.T) {
@@ -1521,8 +1521,8 @@ func TestSTXAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 //// STY
@@ -1534,8 +1534,8 @@ func TestSTYZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestSTYZeropageX(t *testing.T) {
@@ -1546,8 +1546,8 @@ func TestSTYZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestSTYAbsolute(t *testing.T) {
@@ -1557,8 +1557,8 @@ func TestSTYAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Bus.ReadByte(0x8000))
 }
 
 //// TAX
@@ -1570,8 +1570,8 @@ func TestTAX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.X)
 }
 
 func TestTAXNegative(t *testing.T) {
@@ -1581,8 +1581,8 @@ func TestTAXNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xE0, cpu.X)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1593,8 +1593,8 @@ func TestTAXZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.X)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1607,8 +1607,8 @@ func TestTAY(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.Y)
 }
 
 func TestTAYNegative(t *testing.T) {
@@ -1618,8 +1618,8 @@ func TestTAYNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xE0, cpu.Y)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1630,8 +1630,8 @@ func TestTAYZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Y)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Y)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1644,8 +1644,8 @@ func TestTXA(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.A)
 }
 
 func TestTXANegative(t *testing.T) {
@@ -1655,8 +1655,8 @@ func TestTXANegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xE0, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1667,8 +1667,8 @@ func TestTXAZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1681,8 +1681,8 @@ func TestTYA(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.A)
 }
 
 func TestTYANegative(t *testing.T) {
@@ -1692,8 +1692,8 @@ func TestTYANegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xE0, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1704,8 +1704,8 @@ func TestTYAZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1718,8 +1718,8 @@ func TestTSX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.X)
 }
 
 func TestTSXNegative(t *testing.T) {
@@ -1729,8 +1729,8 @@ func TestTSXNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xE0, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xE0, cpu.X)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1741,8 +1741,8 @@ func TestTSXZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.X)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.X)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1755,8 +1755,8 @@ func TestTXS(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x42, cpu.SP)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x42, cpu.SP)
 }
 
 //// ASL
@@ -1768,8 +1768,8 @@ func TestASLaccumulator(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestASLAccumulatorNegative(t *testing.T) {
@@ -1779,8 +1779,8 @@ func TestASLAccumulatorNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x80, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x80, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1791,8 +1791,8 @@ func TestASLAccumulatorZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1803,8 +1803,8 @@ func TestASLAccumulatorCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x54, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.A)
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1815,8 +1815,8 @@ func TestASLzeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestASLzeropageNegative(t *testing.T) {
@@ -1826,8 +1826,8 @@ func TestASLzeropageNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x80, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x80, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getNegative())
 }
 
@@ -1838,8 +1838,8 @@ func TestASLzeropageZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getZero())
 }
 
@@ -1850,8 +1850,8 @@ func TestASLzeropageCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x54, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x54, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1863,8 +1863,8 @@ func TestASLzeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestASLabsolute(t *testing.T) {
@@ -1874,8 +1874,8 @@ func TestASLabsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestASLabsoluteX(t *testing.T) {
@@ -1886,8 +1886,8 @@ func TestASLabsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// LSR
@@ -1899,8 +1899,8 @@ func TestLSRaccumulator(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x01, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.A)
 }
 
 func TestLSRAccumulatorZero(t *testing.T) {
@@ -1910,8 +1910,8 @@ func TestLSRAccumulatorZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -1922,8 +1922,8 @@ func TestLSRAccumulatorCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1934,8 +1934,8 @@ func TestLSRzeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestLSRzeropageZero(t *testing.T) {
@@ -1945,8 +1945,8 @@ func TestLSRzeropageZero(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getZero())
 }
 
@@ -1957,8 +1957,8 @@ func TestLSRzeropageCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x00, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.Bus.ReadByte(0x0080))
 	assert.True(t, cpu.getCarry())
 }
 
@@ -1970,8 +1970,8 @@ func TestLSRzeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestLSRabsolute(t *testing.T) {
@@ -1981,8 +1981,8 @@ func TestLSRabsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestLSRabsoluteX(t *testing.T) {
@@ -1993,8 +1993,8 @@ func TestLSRabsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// ROL
@@ -2006,8 +2006,8 @@ func TestROLAccumulator(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x02, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.A)
 }
 
 func TestROLAccumulatorZeroAndCarry(t *testing.T) {
@@ -2019,8 +2019,8 @@ func TestROLAccumulatorZeroAndCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 	assert.True(t, cpu.getCarry())
 }
@@ -2034,8 +2034,8 @@ func TestROLAccumulatorNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x80, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x80, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -2046,8 +2046,8 @@ func TestROLZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestROLZeropageX(t *testing.T) {
@@ -2058,8 +2058,8 @@ func TestROLZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestROLAbsolute(t *testing.T) {
@@ -2069,8 +2069,8 @@ func TestROLAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestROLAbsoluteX(t *testing.T) {
@@ -2081,8 +2081,8 @@ func TestROLAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x8002))
 }
 
 //// ROR
@@ -2094,8 +2094,8 @@ func TestRORAccumulator(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x01, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.A)
 }
 
 func TestRORAccumulatorZeroAndCarry(t *testing.T) {
@@ -2107,8 +2107,8 @@ func TestRORAccumulatorZeroAndCarry(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 	assert.True(t, cpu.getCarry())
 }
@@ -2122,8 +2122,8 @@ func TestRORAccumulatorNegative(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0x80, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0x80, cpu.A)
 	assert.True(t, cpu.getNegative())
 }
 
@@ -2134,8 +2134,8 @@ func TestRORZeropage(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0080))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.Bus.ReadByte(0x0080))
 }
 
 func TestRORZeropageX(t *testing.T) {
@@ -2146,8 +2146,8 @@ func TestRORZeropageX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x0082))
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.Bus.ReadByte(0x0082))
 }
 
 func TestRORAbsolute(t *testing.T) {
@@ -2157,8 +2157,8 @@ func TestRORAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x8000))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.Bus.ReadByte(0x8000))
 }
 
 func TestRORAbsoluteX(t *testing.T) {
@@ -2169,8 +2169,8 @@ func TestRORAbsoluteX(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0x01, cpu.Bus.ReadByte(0x8002))
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x01, cpu.Bus.ReadByte(0x8002))
 }
 
 /// CMP
@@ -2183,7 +2183,7 @@ func TestCMPImmediate(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2193,7 +2193,7 @@ func TestCMPImmediate(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2203,7 +2203,7 @@ func TestCMPImmediate(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2218,7 +2218,7 @@ func TestCMPZeropage(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2229,7 +2229,7 @@ func TestCMPZeropage(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2240,7 +2240,7 @@ func TestCMPZeropage(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2256,7 +2256,7 @@ func TestCMPZeropageX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2268,7 +2268,7 @@ func TestCMPZeropageX(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2280,7 +2280,7 @@ func TestCMPZeropageX(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2295,7 +2295,7 @@ func TestCMPAbsolute(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2306,7 +2306,7 @@ func TestCMPAbsolute(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2317,7 +2317,7 @@ func TestCMPAbsolute(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2333,7 +2333,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2345,7 +2345,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2357,7 +2357,7 @@ func TestCMPAbsoluteX(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2373,7 +2373,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2385,7 +2385,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2397,7 +2397,7 @@ func TestCMPAbsoluteY(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2414,7 +2414,7 @@ func TestCMPIndirectX(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2427,7 +2427,7 @@ func TestCMPIndirectX(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2440,7 +2440,7 @@ func TestCMPIndirectX(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2457,7 +2457,7 @@ func TestCMPIndirectY(t *testing.T) {
 	cpu.A = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2470,7 +2470,7 @@ func TestCMPIndirectY(t *testing.T) {
 	cpu.A = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2483,7 +2483,7 @@ func TestCMPIndirectY(t *testing.T) {
 	cpu.A = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2499,7 +2499,7 @@ func TestCPXImmediate(t *testing.T) {
 	cpu.X = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2509,7 +2509,7 @@ func TestCPXImmediate(t *testing.T) {
 	cpu.X = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2519,7 +2519,7 @@ func TestCPXImmediate(t *testing.T) {
 	cpu.X = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2534,7 +2534,7 @@ func TestCPXZeropage(t *testing.T) {
 	cpu.X = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2545,7 +2545,7 @@ func TestCPXZeropage(t *testing.T) {
 	cpu.X = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2556,7 +2556,7 @@ func TestCPXZeropage(t *testing.T) {
 	cpu.X = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2571,7 +2571,7 @@ func TestCPXAbsolute(t *testing.T) {
 	cpu.X = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2582,7 +2582,7 @@ func TestCPXAbsolute(t *testing.T) {
 	cpu.X = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2593,7 +2593,7 @@ func TestCPXAbsolute(t *testing.T) {
 	cpu.X = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2609,7 +2609,7 @@ func TestCPYImmediate(t *testing.T) {
 	cpu.Y = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2619,7 +2619,7 @@ func TestCPYImmediate(t *testing.T) {
 	cpu.Y = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2629,7 +2629,7 @@ func TestCPYImmediate(t *testing.T) {
 	cpu.Y = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2644,7 +2644,7 @@ func TestCPYZeropage(t *testing.T) {
 	cpu.Y = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2655,7 +2655,7 @@ func TestCPYZeropage(t *testing.T) {
 	cpu.Y = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2666,7 +2666,7 @@ func TestCPYZeropage(t *testing.T) {
 	cpu.Y = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2681,7 +2681,7 @@ func TestCPYAbsolute(t *testing.T) {
 	cpu.Y = 0x42
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.True(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2692,7 +2692,7 @@ func TestCPYAbsolute(t *testing.T) {
 	cpu.Y = 0x43
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.True(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.False(t, cpu.getNegative())
@@ -2703,7 +2703,7 @@ func TestCPYAbsolute(t *testing.T) {
 	cpu.Y = 0x08
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0x0303, cpu.PC)
 	assert.False(t, cpu.getCarry())
 	assert.False(t, cpu.getZero())
 	assert.True(t, cpu.getNegative())
@@ -2720,10 +2720,10 @@ func TestBRK(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x01FF))
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x01FE))
-	assert.Equal(t, status, cpu.Bus.ReadByte(0x01FD))
+	assert.EqualValues(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0x03, cpu.Bus.ReadByte(0x01FF))
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x01FE))
+	assert.EqualValues(t, status, cpu.Bus.ReadByte(0x01FD))
 	assert.True(t, cpu.getBreak())
 
 }
@@ -2738,28 +2738,28 @@ func TestBCC(t *testing.T) {
 	cpu.LoadProgram([]byte{0x90, 0x05}, 0x0300)
 	cpu.setCarry(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x90, 0x05}, 0x0300)
 	cpu.setCarry(false)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	/// Negative offset
 	// Carry set
 	cpu.LoadProgram([]byte{0x90, 0xfb}, 0x0300)
 	cpu.setCarry(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x90, 0xFB}, 0x0300)
 	cpu.setCarry(false)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 }
 
 //// BCS
@@ -2773,13 +2773,13 @@ func TestBCS(t *testing.T) {
 	cpu.setCarry(true)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xB0, 0x05}, 0x0300)
 	cpu.setCarry(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	/// Negative offset
 	// Carry set
@@ -2787,13 +2787,13 @@ func TestBCS(t *testing.T) {
 	cpu.setCarry(true)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xB0, 0xFB}, 0x0300)
 	cpu.setCarry(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 }
 
 //// BNE
@@ -2806,28 +2806,28 @@ func TestBNE(t *testing.T) {
 	cpu.LoadProgram([]byte{0xD0, 0x05}, 0x0300)
 	cpu.setZero(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xD0, 0x05}, 0x0300)
 	cpu.setZero(false)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	/// Negative offset
 	// Carry set
 	cpu.LoadProgram([]byte{0xD0, 0xfb}, 0x0300)
 	cpu.setZero(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xD0, 0xFB}, 0x0300)
 	cpu.setZero(false)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 }
 
 //// BEQ
@@ -2841,13 +2841,13 @@ func TestBEQ(t *testing.T) {
 	cpu.setZero(true)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xF0, 0x05}, 0x0300)
 	cpu.setZero(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	/// Negative offset
 	// Carry set
@@ -2855,13 +2855,13 @@ func TestBEQ(t *testing.T) {
 	cpu.setZero(true)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0xF0, 0xFB}, 0x0300)
 	cpu.setZero(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 }
 
 //// BPL
@@ -2874,28 +2874,28 @@ func TestBPL(t *testing.T) {
 	cpu.LoadProgram([]byte{0x10, 0x05}, 0x0300)
 	cpu.setNegative(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x10, 0x05}, 0x0300)
 	cpu.setNegative(false)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	/// Negative offset
 	// Carry set
 	cpu.LoadProgram([]byte{0x10, 0xfb}, 0x0300)
 	cpu.setNegative(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x10, 0xFB}, 0x0300)
 	cpu.setNegative(false)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 }
 
 //// BMI
@@ -2909,13 +2909,13 @@ func TestBMI(t *testing.T) {
 	cpu.setNegative(true)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x30, 0x05}, 0x0300)
 	cpu.setNegative(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	/// Negative offset
 	// Carry set
@@ -2923,13 +2923,13 @@ func TestBMI(t *testing.T) {
 	cpu.setNegative(true)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x30, 0xFB}, 0x0300)
 	cpu.setNegative(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 }
 
 //// BVC
@@ -2942,28 +2942,28 @@ func TestBVC(t *testing.T) {
 	cpu.LoadProgram([]byte{0x50, 0x05}, 0x0300)
 	cpu.setOverflow(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x50, 0x05}, 0x0300)
 	cpu.setOverflow(false)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	/// Negative offset
 	// Carry set
 	cpu.LoadProgram([]byte{0x50, 0xfb}, 0x0300)
 	cpu.setOverflow(true)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x50, 0xFB}, 0x0300)
 	cpu.setOverflow(false)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 }
 
 //// BVS
@@ -2977,13 +2977,13 @@ func TestBVS(t *testing.T) {
 	cpu.setOverflow(true)
 	cpu.Step()
 	// 0x0302 + 0x05 = 0x0307
-	assert.Equal(t, 0x0307, cpu.PC)
+	assert.EqualValues(t, 0x0307, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x70, 0x05}, 0x0300)
 	cpu.setOverflow(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 
 	/// Negative offset
 	// Carry set
@@ -2991,13 +2991,13 @@ func TestBVS(t *testing.T) {
 	cpu.setOverflow(true)
 	cpu.Step()
 	// 0x0302 + 0xFB => 0x0302 - 0x05 => 0x02FD
-	assert.Equal(t, 0x02FD, cpu.PC)
+	assert.EqualValues(t, 0x02FD, cpu.PC)
 
 	// Carry not set
 	cpu.LoadProgram([]byte{0x70, 0xFB}, 0x0300)
 	cpu.setOverflow(false)
 	cpu.Step()
-	assert.Equal(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0x0302, cpu.PC)
 }
 
 //// BIT
@@ -3098,9 +3098,9 @@ func TestPHP(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFE, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFE, cpu.SP)
+	assert.EqualValues(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
 }
 
 //// PLP
@@ -3113,9 +3113,9 @@ func TestPLP(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.P)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.SP)
+	assert.EqualValues(t, 0xB5, cpu.P)
 }
 
 //// PHA
@@ -3128,9 +3128,9 @@ func TestPHA(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFE, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFE, cpu.SP)
+	assert.EqualValues(t, 0xB5, cpu.Bus.ReadByte(0x01FF))
 }
 
 //// PLP
@@ -3142,24 +3142,24 @@ func TestPLA(t *testing.T) {
 	cpu.stackPush(0x42)
 	cpu.Step()
 
-	assert.Equal(t, 0x0301, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.SP)
-	assert.Equal(t, 0x42, cpu.A)
+	assert.EqualValues(t, 0x0301, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.SP)
+	assert.EqualValues(t, 0x42, cpu.A)
 
 	cpu.stackPush(0xB5)
 	cpu.Step()
 
-	assert.Equal(t, 0x0302, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.SP)
-	assert.Equal(t, 0xB5, cpu.A)
+	assert.EqualValues(t, 0x0302, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.SP)
+	assert.EqualValues(t, 0xB5, cpu.A)
 	assert.True(t, cpu.getNegative())
 
 	cpu.stackPush(0x00)
 	cpu.Step()
 
-	assert.Equal(t, 0x0303, cpu.PC)
-	assert.Equal(t, 0xFF, cpu.SP)
-	assert.Equal(t, 0x00, cpu.A)
+	assert.EqualValues(t, 0x0303, cpu.PC)
+	assert.EqualValues(t, 0xFF, cpu.SP)
+	assert.EqualValues(t, 0x00, cpu.A)
 	assert.True(t, cpu.getZero())
 }
 
@@ -3171,7 +3171,7 @@ func TestJMPAbsolute(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0x1234, cpu.PC)
 }
 
 func TestJMPIndirect(t *testing.T) {
@@ -3181,7 +3181,7 @@ func TestJMPIndirect(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0x1234, cpu.PC)
 }
 
 //// JSR
@@ -3193,12 +3193,12 @@ func TestJSR(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0xFD, cpu.SP)
+	assert.EqualValues(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0xFD, cpu.SP)
 
 	// We expect PC - 1 (e.g. 3rd byte of JSR) to be on the stack
-	assert.Equal(t, 0x03, cpu.Bus.ReadByte(0x1FF))
-	assert.Equal(t, 0x02, cpu.Bus.ReadByte(0x1FE))
+	assert.EqualValues(t, 0x03, cpu.Bus.ReadByte(0x1FF))
+	assert.EqualValues(t, 0x02, cpu.Bus.ReadByte(0x1FE))
 }
 
 //// RTS
@@ -3213,8 +3213,8 @@ func TestRTS(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234+1, cpu.PC)
-	assert.Equal(t, 0x34, cpu.P)
+	assert.EqualValues(t, 0x1234+1, cpu.PC)
+	assert.EqualValues(t, 0x34, cpu.P)
 }
 
 //// RTI
@@ -3229,8 +3229,8 @@ func TestRTI(t *testing.T) {
 
 	cpu.Step()
 
-	assert.Equal(t, 0x1234, cpu.PC)
-	assert.Equal(t, 0x5B|0x20, cpu.P)
+	assert.EqualValues(t, 0x1234, cpu.PC)
+	assert.EqualValues(t, 0x5B|0x20, cpu.P)
 }
 
 // Run this last, as the full suite takes ±10 seconds to run at

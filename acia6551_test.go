@@ -17,7 +17,7 @@ func TestNewAcia6551(t *testing.T) {
 	acia, err := NewAcia6551(output)
 
 	assert.Nil(t, err)
-	assert.Equal(t, 0x4, acia.Size())
+	assert.EqualValues(t, 0x4, acia.Size())
 }
 
 func TestAciaAsMemory(t *testing.T) {
@@ -29,17 +29,17 @@ func TestAciaReset(t *testing.T) {
 
 	a.Reset()
 
-	assert.Equal(t, a.tx, 0)
+	assert.EqualValues(t, a.tx, 0)
 	assert.True(t, a.txEmpty)
 
-	assert.Equal(t, a.rx, 0)
+	assert.EqualValues(t, a.rx, 0)
 	assert.False(t, a.rxFull)
 
 	assert.False(t, a.txIrqEnabled)
 	assert.False(t, a.rxIrqEnabled)
 
 	assert.False(t, a.overrun)
-	assert.Equal(t, 0, a.controlData)
+	assert.EqualValues(t, 0, a.controlData)
 }
 
 func TestAciaReaderWithTxEmpty(t *testing.T) {
@@ -51,7 +51,7 @@ func TestAciaReaderWithTxEmpty(t *testing.T) {
 	value := make([]byte, 1)
 	bytesRead, _ := a.Read(value)
 
-	assert.Equal(t, 0, bytesRead)
+	assert.EqualValues(t, 0, bytesRead)
 }
 
 func TestAciaWriteByteAndReader(t *testing.T) {
@@ -70,7 +70,7 @@ func TestAciaWriteByteAndReader(t *testing.T) {
 
 	<-done
 
-	assert.Equal(t, 0x42, value[0])
+	assert.EqualValues(t, 0x42, value[0])
 }
 
 func TestAciaWriterAndReadByte(t *testing.T) {
@@ -79,15 +79,15 @@ func TestAciaWriterAndReadByte(t *testing.T) {
 	// System writes a single byte
 	bytesWritten, _ := a.Write([]byte{0x42})
 
-	if assert.Equal(t, 1, bytesWritten) {
-		assert.Equal(t, 0x42, a.ReadByte(aciaData))
+	if assert.EqualValues(t, 1, bytesWritten) {
+		assert.EqualValues(t, 0x42, a.ReadByte(aciaData))
 	}
 
 	// System writes multiple bytes
 	bytesWritten, _ = a.Write([]byte{0x42, 0x32, 0xAB})
 
-	if assert.Equal(t, 3, bytesWritten) {
-		assert.Equal(t, 0xAB, a.ReadByte(aciaData))
+	if assert.EqualValues(t, 3, bytesWritten) {
+		assert.EqualValues(t, 0xAB, a.ReadByte(aciaData))
 	}
 }
 
@@ -108,14 +108,14 @@ func TestAciaCommandRegister(t *testing.T) {
 	assert.True(t, a.rxIrqEnabled)
 	assert.True(t, a.txIrqEnabled)
 
-	assert.Equal(t, 0x06, a.ReadByte(aciaCommand))
+	assert.EqualValues(t, 0x06, a.ReadByte(aciaCommand))
 }
 
 func TestAciaControlRegister(t *testing.T) {
 	a, _ := AciaSubject()
 
 	a.WriteByte(aciaControl, 0xB8)
-	assert.Equal(t, 0xB8, a.ReadByte(aciaControl))
+	assert.EqualValues(t, 0xB8, a.ReadByte(aciaControl))
 }
 
 func TestAciaStatusRegister(t *testing.T) {
@@ -124,22 +124,22 @@ func TestAciaStatusRegister(t *testing.T) {
 	a.rxFull = false
 	a.txEmpty = false
 	a.overrun = false
-	assert.Equal(t, 0x00, a.ReadByte(aciaStatus))
+	assert.EqualValues(t, 0x00, a.ReadByte(aciaStatus))
 
 	a.rxFull = true
 	a.txEmpty = false
 	a.overrun = false
-	assert.Equal(t, 0x08, a.ReadByte(aciaStatus))
+	assert.EqualValues(t, 0x08, a.ReadByte(aciaStatus))
 
 	a.rxFull = false
 	a.txEmpty = true
 	a.overrun = false
-	assert.Equal(t, 0x10, a.ReadByte(aciaStatus))
+	assert.EqualValues(t, 0x10, a.ReadByte(aciaStatus))
 
 	a.rxFull = false
 	a.txEmpty = false
 	a.overrun = true
-	assert.Equal(t, 0x04, a.ReadByte(aciaStatus))
+	assert.EqualValues(t, 0x04, a.ReadByte(aciaStatus))
 }
 
 func TestAciaIntegration(t *testing.T) {
@@ -183,6 +183,6 @@ func TestAciaIntegration(t *testing.T) {
 	// value := make([]byte, 1)
 	// bytesRead, _ := acia.Read(value)
 
-	assert.Equal(t, 0x42, value[0])
-	assert.Equal(t, 0xAB, cpu.A)
+	assert.EqualValues(t, 0x42, value[0])
+	assert.EqualValues(t, 0xAB, cpu.A)
 }
