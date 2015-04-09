@@ -11,7 +11,7 @@ address space of the Cpu to the relative memory addressing of
 each component.
 */
 type AddressBus struct {
-	addressables []addressable // Different components
+	addressables []*addressable // Different components
 }
 
 type addressable struct {
@@ -26,7 +26,7 @@ func (a *addressable) String() string {
 
 // Creates a new, empty 16-bit AddressBus
 func NewAddressBus() (*AddressBus, error) {
-	return &AddressBus{addressables: make([]addressable, 0)}, nil
+	return &AddressBus{addressables: make([]*addressable, 0)}, nil
 }
 
 // Returns a string with details about the AddressBus and attached memory
@@ -54,7 +54,7 @@ func (a *AddressBus) Attach(memory Memory, offset uint16) {
 	end := offset + memory.Size() - 1
 	addressable := addressable{memory: memory, start: start, end: end}
 
-	a.addressables = append(a.addressables, addressable)
+	a.addressables = append(a.addressables, &addressable)
 }
 
 /*
@@ -112,7 +112,7 @@ func (a *AddressBus) Write16(address uint16, data uint16) {
 func (a *AddressBus) addressableForAddress(address uint16) (*addressable, error) {
 	for _, addressable := range a.addressables {
 		if addressable.start <= address && addressable.end >= address {
-			return &addressable, nil
+			return addressable, nil
 		}
 	}
 
