@@ -14,9 +14,9 @@ func Test8kRoms(t *testing.T) {
 	rom, err := NewRom("test/8kb.rom")
 
 	assert.Nil(t, err)
-	assert.Equal(t, 0x2000, rom.Size())
-	assert.Equal(t, 0x01, rom.ReadByte(0x0000))
-	assert.Equal(t, 0xFF, rom.ReadByte(0x2000-1))
+	assert.EqualValues(t, 0x2000, rom.Size())
+	assert.EqualValues(t, 0x01, rom.ReadByte(0x0000))
+	assert.EqualValues(t, 0xFF, rom.ReadByte(0x2000-1))
 }
 
 func TestRomWritePanic(t *testing.T) {
@@ -32,9 +32,9 @@ func Test16kRom(t *testing.T) {
 	rom, err := NewRom("test/16kb.rom")
 
 	assert.Nil(t, err)
-	assert.Equal(t, 0x4000, rom.Size())
-	assert.Equal(t, 0x01, rom.ReadByte(0x0000))
-	assert.Equal(t, 0xFF, rom.ReadByte(0x4000-1))
+	assert.EqualValues(t, 0x4000, rom.Size())
+	assert.EqualValues(t, 0x01, rom.ReadByte(0x0000))
+	assert.EqualValues(t, 0xFF, rom.ReadByte(0x4000-1))
 }
 
 func TestRomNotFound(t *testing.T) {
