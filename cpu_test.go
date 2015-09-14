@@ -3258,3 +3258,29 @@ func TestKlausDormann6502(t *testing.T) {
 		prevPC = cpu.PC
 	}
 }
+
+// Run this last, as the full suite takes ±10 seconds to run at
+// maximum speed
+func TestKlausDormann65C02ExtendedOpcodes(t *testing.T) {
+	fmt.Println("Running Klaus Dormann' 65C02 extended opcodes tests. This may take some time...")
+	cpu, _, _ := NewRamMachine()
+	cpu.LoadProgram(loadProgram("test/65C02_extended_opcodes_test.bin"), 0x0000)
+	cpu.PC = 0x0400
+	prevPC := uint16(0x0400)
+
+	for {
+		cpu.Step()
+
+		if cpu.PC == prevPC {
+			if cpu.PC != 0x3399 {
+				str := "Looping PC detected at PC 0x%04X. We've hit a failing Klaus Dormann test."
+				panic(fmt.Sprintf(str, cpu.PC))
+			} else {
+				fmt.Println("Klaus Dormann's 6502 functional tests passed.")
+				break
+			}
+		}
+
+		prevPC = cpu.PC
+	}
+}
